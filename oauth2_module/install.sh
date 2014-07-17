@@ -30,10 +30,12 @@ cd LuaJIT-2.0.3
 make PREFIX=$luajit_dir
 make install PREFIX=$luajit_dir
 
-# json4lua
+# lua-cjson
 cd $src_dir
-git clone https://github.com/craigmj/json4lua.git
-cp json4lua/json4lua/json/json.lua $luajit_dir/share/lua/5.1/
+git clone https://github.com/efelix/lua-cjson.git
+cd lua-cjson/
+make CFLAGS=-I$src_dir/LuaJIT-2.0.3/src
+make PREFIX=PREFIX=$luajit_dir install
 
 ## nginx modules
 # openssl

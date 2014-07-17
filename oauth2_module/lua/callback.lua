@@ -24,8 +24,9 @@ if request_params["state"] == ngx.var.cookie_oauth_state then
    local access_token_endpoint = ngx.var.local_proxy_access_token_endpoint
    local res = ngx.location.capture(local_proxy_namespace..access_token_endpoint, options)
 
-   local json = require("json")
-   local response_object = json.decode(res.body)
+   require("cjson")
+   local response_object = cjson.decode(res.body)
+
    local session_key = randomizer.generate(32)
    local access_token = response_object["access_token"]
    local expires_in = response_object["expires_in"]
