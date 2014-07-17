@@ -1,0 +1,81 @@
+# oauth server
+set $authorize_url https://oauth.server.com/oauth/authorize;
+# callback URL
+set $callback_url https://oauth.client.com/oauth/callback;
+# scope
+set $scope "user";
+# oauth client settings
+set $client_id "Client ID";
+set $client_secret "Client Secret";
+# expiers_in
+set $default_expires_in 3600;
+
+# lua scripts directory
+set $lua_scripts_dir /path/to/edo-sso/oauth2_module/lua;
+
+# local proxy namespace for ngx.location.capture
+set $local_proxy_namespace /location/capture;
+# local proxy endpoint to get access_token
+set $local_proxy_access_token_endpoint /access_token;
+
+
+location / {
+    index index.html;
+    expires 30d;
+    try_files $uri @oauth_proxy;
+}
+
+location /oauth/login {
+    access_by_lua_file /path/to/edo-sso/oauth2_module/lua/login.lua;
+}
+location /oauth/callback {
+    access_by_lua_file /path/to/edo-sso/oauth2_module/lua/callback.lua;
+}
+
+# = $local_proxy_namespace
+location /location/capture {
+    deny all;
+
+    # = $local_proxy_namespace$local_proxy_access_token_endpoint
+    location /location/capture/access_token {
+        proxy_set_header Accept application/json;
+        proxy_set_header Accept-Encoding text/plain;
+        proxy_pass https://oauth.server.com/oauth/access_token/endpoint;
+    }
+    # = $local_proxy_namespace/redis/...
+    location ~ /redis/get/([0-9A-Za-z-_.]*)$ {
+        set $key $1;
+        redis2_query get $key;
+        redis2_pass unix:/path/to/redis.sock;
+    }
+    location ~ /redis/setex/([0-9A-Za-z-_.]*)/([0-9A-Za-z-_.]*)/([0-9]*)$ {
+        set $key $1;
+        set $value $2;
+        set $expire $3;
+        redis2_query setex $key $expire $value;
+        redis2_pass unix:/path/to/redis.sock;
+    }
+}
+
+location @oauth_proxy {
+    access_by_lua_file /path/to/edo-sso/oauth2_module/lua/add_header.lua;
+    try_files $uri @backend;
+}
+
+location @backend {
+    more_set_headers "Pragma: no-cache";
+    more_set_headers "Cache-Control: no-store";
+    more_set_headers "Expires: Thu, 01 Dec 1994 16:00:00 GMT";
+    more_set_headers "X-FRAME-OPTIONS: SAMEORIGIN";
+
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-Ssl on;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header Host $host;
+    proxy_pass http://unix:/path/to/backend_app.sock;
+
+    proxy_buffering on;
+    proxy_buffer_size 64k;
+    proxy_buffers 64 64k;
+}

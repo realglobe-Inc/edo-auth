@@ -1,0 +1,4 @@
+tmp/*
+src/*
+lib/*
+nginx.conf/*.conf

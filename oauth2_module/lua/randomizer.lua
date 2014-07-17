@@ -1,0 +1,7 @@
+local executer = require "executer"
+
+return {
+   generate = function(length)
+      return executer.execute('cat /dev/urandom | tr -c -d "[:alnum:]" | head -c '..length)
+   end
+}
