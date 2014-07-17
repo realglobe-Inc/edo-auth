@@ -38,6 +38,11 @@ make CFLAGS=-I$src_dir/LuaJIT-2.0.3/src
 make PREFIX=PREFIX=$luajit_dir install
 
 ## nginx modules
+# pcre
+cd $src_dir
+wget ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-8.33.tar.gz
+tar zxf pcre-8.33.tar.gz
+
 # openssl
 cd $src_dir
 wget http://www.openssl.org/source/openssl-1.0.1h.tar.gz
@@ -82,6 +87,7 @@ export LUAJIT_INC=$luajit_dir/include/luajit-2.0
  --with-http_gzip_static_module\
  --with-http_realip_module\
  --with-http_spdy_module\
+ --with-pcre=$src_dir/pcre-8.33\
  --with-ld-opt="-Wl,-rpath=$luajit_dir/lib"\
  --add-module=$src_dir/headers-more-nginx-module\
  --add-module=$src_dir/redis2-nginx-module\
