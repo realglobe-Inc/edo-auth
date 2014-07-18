@@ -35,7 +35,7 @@ cd $src_dir
 git clone https://github.com/efelix/lua-cjson.git
 cd lua-cjson/
 make CFLAGS=-I$src_dir/LuaJIT-2.0.3/src
-make PREFIX=PREFIX=$luajit_dir install
+make PREFIX=$luajit_dir install
 
 ## nginx modules
 # pcre
