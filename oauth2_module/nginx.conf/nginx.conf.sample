@@ -25,10 +25,10 @@ location / {
     try_files $uri @oauth_proxy;
 }
 
-location /oauth/login {
+location = /oauth/login {
     access_by_lua_file /path/to/edo-sso/oauth2_module/lua/login.lua;
 }
-location /oauth/callback {
+location = /oauth/callback {
     access_by_lua_file /path/to/edo-sso/oauth2_module/lua/callback.lua;
 }
 
