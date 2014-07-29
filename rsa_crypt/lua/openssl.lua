@@ -36,7 +36,9 @@ return {
          return executer.execute("printf "..data.." | openssl dgst -sign "..private_key_path.." -"..hash_function)
       end,
       verify_hash = function(raw_data, encrypted_data, public_key_path, hash_function)
-         return executer.execute("printf "..raw_data.." | openssl dgst -"..hash_function.." -verify "..public_key_path.." -signature sha256.sign")
+         local tmp_file_path = "/path/to/tmp/file"
+         executer.execute("printf "..encrypted_data.." | openssl base64 -d -A > "..tmp_file_path)
+         return os.execute("printf "..raw_data.." | openssl dgst -"..hash_function.." -verify "..public_key_path.." -signature "..tmp_file_path)
       end
    }
 }
