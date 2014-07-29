@@ -32,11 +32,11 @@ callback.lua ではアクセストークンを取得し、redis に保存する�
   * オプション。任意のJSONを「base64エンコード+改行を削除」したもの
 
 ```sh
-$ sender_key_uuid=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+$ sender_uuid=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 $ receiver_uuid=yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy
 $ private_key_uuid=zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz
 $ timestamp=`date +%s`
-$ encoded_token=`printf ${sender_key_uuid},${receiver_uuid},${timestamp} | openssl rsautl -sign -inkey /path/to/private.key | openssl base64 | tr -d '\n'`
+$ encoded_token=`printf ${sender_uuid},${receiver_uuid},${timestamp} | openssl rsautl -sign -inkey /path/to/private.key | openssl base64 | tr -d '\n'`
 
 $ curl https://edo-service.com/ -H "X-EDO-Private-Key-UUID: ${private_key_uuid}" -H "X-EDO-Auth-Encoded-Token: ${encoded_token}" -H "X-EDO-Auth-Params: ..."
 ```
@@ -55,11 +55,11 @@ $ curl https://edo-service.com/ -H "X-EDO-Private-Key-UUID: ${private_key_uuid}"
   * オプション。任意のJSONを「base64エンコード+改行を削除」したもの
 
 ```sh
-$ sender_key_uuid=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+$ sender_uuid=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 $ receiver_uuid=yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy
 $ private_key_uuid=zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz
 $ timestamp=`date +%s`
-$ auth_token=${sender_key_uuid},${receiver_uuid},${timestamp}
+$ auth_token=${sender_uuid},${receiver_uuid},${timestamp}
 $ signed_token=`printf ${auth_token} | openssl dgst -sign /path/to/private.key -sha256 | openssl base64 | tr -d '\n'`
 
 $ curl https://edo-service.com/ -H "X-EDO-Private-Key-UUID: ${private_key_uuid}" -H "X-EDO-Auth-Token: ${auth_token}" -H "X-EDO-Auth-Signed-Token: ${signed_token}" -H "X-EDO-Hash-Function: sha256" -H "X-EDO-Auth-Params: ..."
