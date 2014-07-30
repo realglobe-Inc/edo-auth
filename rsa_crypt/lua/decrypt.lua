@@ -15,7 +15,7 @@ local raw_token = request_headers["X-EDO-Auth-Token"]
 local signed_token = request_headers["X-EDO-Auth-Signed-Token"]
 local hash_function = request_headers["X-EDO-Hash-Function"]
 
-local openssl = require "openssl"
+local openssl_rsa = require "openssl_rsa"
 
 if private_key_uuid == nil then
    exiter.exit("private_key_uuid is blank")
@@ -31,13 +31,13 @@ local public_key_path = public_key_directory..private_key_uuid
 if encoded_token ~= nil then
    ngx.log(ngx.DEBUG, "token: *** "..encoded_token.." ***")
 
-   local raw_token = openssl.rsa.base64_verify(encoded_token, public_key_path)
+   raw_token = openssl_rsa.base64_verify(encoded_token, public_key_path)
    ngx.log(ngx.DEBUG, "decoded: *** "..raw_token.." ***")
 elseif (raw_token ~= nil) and (signed_token ~= nil) then
    if hash_function == nil then
       hash_function = "sha256"
    end
-   if openssl.rsa.verify_hash(raw_token, signed_token, public_key_path, hash_function) ~= 0 then
+   if not openssl_rsa.verify_hash(raw_token, signed_token, public_key_path, hash_function) then
       exiter.exit("verify failed")
    end
 else

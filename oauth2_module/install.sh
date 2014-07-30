@@ -37,16 +37,36 @@ cd lua-cjson/
 make CFLAGS=-I$src_dir/LuaJIT-2.0.3/src
 make PREFIX=$luajit_dir install
 
+### lua-openssl
+# openssl
+cd $src_dir
+wget http://www.openssl.org/source/openssl-1.0.1h.tar.gz
+tar zxf openssl-1.0.1h.tar.gz
+cd openssl-1.0.1h
+./config --prefix=$lib_dir/openssl/ssl -fPIC shared zlib threads
+make
+make install
+
+# lua-openssl
+cd $src_dir
+git clone https://github.com/zhaozg/lua-openssl.git
+cd lua-openssl/
+git checkout 1d5c3be
+make PREFIX=$lib_dir/openssl CFLAGS="-I$src_dir/LuaJIT-2.0.3/src -DPTHREADS"
+make install PREFIX=$luajit_dir
+
+# luajit-mime-base64
+cd $src_dir
+git clone https://github.com/jsolman/luajit-mime-base64.git
+cd luajit-mime-base64
+git checkout 769e16d
+cp mime_base64.lua $luajit_dir/share/lua/5.1/
+
 ## nginx modules
 # pcre
 cd $src_dir
 wget ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-8.33.tar.gz
 tar zxf pcre-8.33.tar.gz
-
-# openssl
-cd $src_dir
-wget http://www.openssl.org/source/openssl-1.0.1h.tar.gz
-tar zxf openssl-1.0.1h.tar.gz
 
 # headers-more
 cd $src_dir
