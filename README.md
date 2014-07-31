@@ -1,9 +1,12 @@
 edo-auth
 =======
 
-### SSO(OAuth2)モジュール
+### 設置方法
 
-#### 設置方法
+nginx_proxy/install.sh を参照。  
+その後、nginx.conf を適切に設定し nginx を起動する。  
+
+### SSO(OAuth2)モジュール
 
 まずアプリをOAuthクライアントとして登録し、クライアントIDやシークレットトークンを取得しておく。  
 nginx の起動時に、nginx.conf で以下の項目を適切に設定する。  
