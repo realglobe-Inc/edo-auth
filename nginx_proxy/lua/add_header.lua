@@ -1,4 +1,4 @@
-package.path = package.path..";"..ngx.var.lua_scripts_dir.."/?.lua"
+package.path = package.path..";"..ngx.var.lua_lib_dir.."/?.lua"
 
 local redis = require "redis"
 
