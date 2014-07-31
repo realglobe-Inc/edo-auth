@@ -1,12 +1,11 @@
 require "openssl"
-local mime_base64 = require "mime_base64"
 
 return {
    base64_verify = function(base64_encrypted_data, public_key_path)
       local public_key_file = io.open(public_key_path)
       local public_key_string = public_key_file:read("*a")
       public_key_file:close()
-      local encrypted_data = mime_base64.base64_decode(base64_encrypted_data)
+      local encrypted_data = ngx.decode_base64(base64_encrypted_data)
       local public_key = openssl.pkey.read(public_key_string, true)
       return public_key:decrypt(encrypted_data)
    end,
@@ -14,7 +13,7 @@ return {
       local public_key_file = io.open(public_key_path)
       local public_key_string = public_key_file:read("*a")
       public_key_file:close()
-      local encrypted_data = mime_base64.base64_decode(base64_encrypted_data)
+      local encrypted_data = ngx.decode_base64(base64_encrypted_data)
       local public_key = openssl.pkey.read(public_key_string, true)
       return public_key:verify(raw_data, encrypted_data, hash_function)
    end

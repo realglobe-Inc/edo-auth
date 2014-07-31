@@ -17,12 +17,6 @@ local request_params = {
    scope = scope,
    state = state
 }
-local params_string = ""
-for k, v in pairs(request_params) do
-   if string.len(params_string) ~= 0 then
-      params_string = params_string.."&"
-   end
-   params_string = params_string..k.."="..v
-end
-url = oauth_authorize_url.."?"..params_string
+local params_string = ngx.encode_args(request_params)
+local url = oauth_authorize_url.."?"..params_string
 return ngx.redirect(url)

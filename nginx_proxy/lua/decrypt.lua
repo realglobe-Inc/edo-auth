@@ -4,7 +4,7 @@ local exiter = require "exiter"
 
 -- TODO
 local self_uuid = "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy"
-local public_key_directory = "/path/to/public_keys/directory"
+local public_key_directory = "/home/c4sa_www/edo-auth/nginx_proxy/"
 
 local request_headers = ngx.req.get_headers()
 local private_key_uuid = request_headers["X-EDO-Private-Key-UUID"]

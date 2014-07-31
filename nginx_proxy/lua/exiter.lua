@@ -1,3 +1,5 @@
+require "cjson"
+
 return {
    exit = function(message)
       ngx.log(ngx.DEBUG, "exit: *** "..message.." ***")

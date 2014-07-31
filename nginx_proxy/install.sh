@@ -1,8 +1,8 @@
 #!/bin/bash
 
-sso_module_dir=$HOME/edo-sso/oauth2_module
-src_dir=$sso_module_dir/src
-lib_dir=$sso_module_dir/lib
+auth_module_dir=`dirname $0`
+src_dir=$auth_module_dir/src
+lib_dir=$auth_module_dir/lib
 
 mkdir $src_dir
 mkdir $lib_dir
@@ -19,8 +19,8 @@ git checkout 2.8.12
 make
 make install PREFIX=$redis_dir
 cd $redis_dir/bin
-cp $sso_module_dir/redis.conf .
-./redis-server redis.conf
+cp $auth_module_dir/redis.conf .
+$redis_dir/bin/redis-server redis.conf
 
 # LuaJIT
 cd $src_dir
@@ -117,4 +117,4 @@ make
 make install
 
 mkdir $nginx_dir/conf/oauth2
-cp $sso_module_dir/nginx.conf/nginx.conf.sample $nginx_dir/conf/oauth2/nginx.conf
+cp $auth_module_dir/nginx.conf/nginx.conf.sample $nginx_dir/conf/oauth2/nginx.conf
