@@ -37,6 +37,31 @@ cd lua-cjson/
 make CFLAGS=-I$src_dir/LuaJIT-2.0.3/src
 make PREFIX=$luajit_dir install
 
+# cmake
+cd $src_dir
+wget http://www.cmake.org/files/v3.0/cmake-3.0.0.tar.gz
+tar zxf cmake-3.0.0.tar.gz
+cd cmake-3.0.0
+./configure
+make
+
+# curl
+cd $src_dir
+wget http://curl.haxx.se/download/curl-7.37.1.tar.gz
+tar zxf curl-7.37.1.tar.gz
+cd curl-7.37.1
+./configure --prefix=$lib_dir/curl
+make
+make install
+
+# lua-curl
+cd $src_dir
+git clone https://github.com/msva/lua-curl.git
+cd lua-curl/
+CMAKE_PREFIX_PATH=$lib_dir/curl LUA_DIR=$luajit_dir $src_dir/cmake-3.0.0/bin/cmake -DUSE_LUAJIT=ON
+make C_FLAGS="-O3 -fPIC -I$luajit_dir/include/luajit-2.0 -I$lib_dir/curl/include -L$lib_dir/curl/lib"
+make install
+
 ### lua-openssl
 # openssl
 cd $src_dir
