@@ -19,4 +19,4 @@ local request_params = {
 }
 local params_string = ngx.encode_args(request_params)
 local url = oauth_authorize_url.."?"..params_string
-return ngx.redirect(url)
+ngx.redirect(url)

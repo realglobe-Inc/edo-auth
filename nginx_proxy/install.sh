@@ -22,6 +22,13 @@ cd $redis_dir/bin
 cp $auth_module_dir/redis.conf .
 $redis_dir/bin/redis-server redis.conf
 
+# lua-resty-redis
+cd $src_dir
+git clone https://github.com/openresty/lua-resty-redis.git
+cd lua-resty-redis/
+git checkout c49ba7c
+cp -rf lib/resty $luajit_dir/share/lua/5.1/
+
 # LuaJIT
 cd $src_dir
 wget http://luajit.org/download/LuaJIT-2.0.3.tar.gz

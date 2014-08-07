@@ -1,8 +1,9 @@
 require "cjson"
+local logger = require "logger"
 
 return {
    exit = function(message)
-      ngx.log(ngx.DEBUG, "exit: *** "..message.." ***")
+      logger.debug("exiter.lua", "exit:", message)
       ngx.header["X-EDO-Error-Message"] = message
       local response_object = {
          status = "error",
