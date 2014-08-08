@@ -1,32 +1,20 @@
-# oauth server
-set $authorize_url https://oauth.server.com/oauth/authorize;
-# callback URL
-set $callback_url https://oauth.client.com/oauth/callback;
-# scope
-set $scope "user";
-# oauth client settings
-set $client_id "Client ID";
-set $client_secret "Client Secret";
-# expiers_in
-set $default_expires_in 3600;
+# EDO proxy dir
+set $proxy_module_dir /path/to/edo-auth/nginx_proxy;
 
 # lua scripts directory
-set $lua_scripts_dir /path/to/edo-auth/nginx_proxy/lua;
+set $lua_scripts_dir $proxy_module_dir/lua;
 set $lua_lib_dir $lua_scripts_dir/lib;
 
-# local proxy namespace for ngx.location.capture
-set $local_proxy_namespace /location/capture;
-# local proxy endpoint to get access_token
-set $local_proxy_access_token_endpoint /access_token;
-
 ## development environment
+## worker process xxxx exited on signal 11 (core dumped)
 # lua_code_cache off;
 # error_log logs/error.log debug;
 
 location / {
     index index.html;
     expires 30d;
-    try_files $uri @oauth_proxy;
+    access_by_lua_file $lua_scripts_dir/add_header.lua;
+    try_files $uri @backend;
 }
 
 location /api {
@@ -39,42 +27,6 @@ location = /oauth/login {
 }
 location = /oauth/callback {
     access_by_lua_file $lua_scripts_dir/callback.lua;
-}
-
-# = $local_proxy_namespace
-location /location/capture {
-    deny all;
-
-    # = $local_proxy_namespace$local_proxy_access_token_endpoint
-    location /location/capture/access_token {
-        proxy_set_header Accept application/json;
-        proxy_set_header Accept-Encoding text/plain;
-        proxy_pass https://oauth.server.com/oauth/access_token/endpoint;
-    }
-    # = $local_proxy_namespace/redis/...
-    location ~ /redis/get/([0-9A-Za-z-_.]*)$ {
-        set $key $1;
-        redis2_query get $key;
-        redis2_pass unix:/path/to/redis.sock;
-    }
-    location ~ /redis/setex/([0-9A-Za-z-_.]*)/([0-9A-Za-z-_.]*)/([0-9]*)$ {
-        set $key $1;
-        set $value $2;
-        set $expire $3;
-        redis2_query setex $key $expire $value;
-        redis2_pass unix:/path/to/redis.sock;
-    }
-    location /location/capture/public_keys/get {
-        proxy_set_header Content-Type application/json;
-        proxy_set_header Accept application/json;
-        proxy_set_header Accept-Encoding text/plain;
-        proxy_pass https://oauth.server.com/api/public_keys/get;
-    }
-}
-
-location @oauth_proxy {
-    access_by_lua_file $lua_scripts_dir/add_header.lua;
-    try_files $uri @backend;
 }
 
 location @backend {
