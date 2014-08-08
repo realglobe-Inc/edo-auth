@@ -1,16 +1,14 @@
 require "cjson"
-local curl_wrapper = require "curl_wrapper"
+local config = require "config"
 local logger = require "logger"
-
--- TODO
-local public_key_endpoint = "https://dyqjbmx-ajj-app001.c4sa.net/api/public_keys/get"
-local public_key_dir = "/home/c4sa_www/edo-auth/nginx_proxy/tmp/public_keys/"
+local curl_wrapper = require "curl_wrapper"
 
 local function public_key_file_path(key_uuid)
-   return public_key_dir..key_uuid
+   return config.public_key.local_storage_directory.."/"..key_uuid
 end
 
 local function download(key_uuid)
+   local public_key_string
    local params = {
       auth_key = "uGtY9kA5DLqdA8IpppzeSKKEKKbt0yfr",
       public_key_uuid = key_uuid
@@ -19,12 +17,12 @@ local function download(key_uuid)
       "Content-Type: application/json"
    }
    curl_wrapper.set_headers(headers)
-   local response = curl_wrapper.post(public_key_endpoint, cjson.encode(params))
+   local response = curl_wrapper.post(config.public_key.api_endpoint, cjson.encode(params))
    logger.debug("public_key_manager.lua", "response.body:", response.body)
    if response.body then
       local response_object = cjson.decode(response.body)
       if not response_object["data"] then
-         logger.debug("public_key_manager.lua", "response_object.data not found")
+         logger.err("public_key_manager.lua", "response_object.data not found")
          return
       end
       public_key_string = response_object["data"]["public_key"]
@@ -33,7 +31,7 @@ local function download(key_uuid)
          fd:write(public_key_string)
          fd:close()
       else
-         logger.debug("public_key_manager.lua", "download:", err)
+         logger.err("public_key_manager.lua", "download:", err)
       end
    end
    return public_key_string

@@ -23,7 +23,6 @@ local callback_options = {
          local _, _, key, value = str:find("(.*):%s*([^%c]*)")
          if key then
             response_headers[key] = value
-            logger.debug("curl_wrapper.lua", "response_header", key, ":", value)
          end
       end
    end
@@ -34,12 +33,13 @@ local function initialize(url)
    response_headers = {}
    response_body = ""
    client:setopt_url(url)
-   client:setopt_httpheader(request_headers)
    client:setopt_verbose(1)
 end
 
 local function perform()
+   client:setopt_httpheader(request_headers)
    client:perform(callback_options)
+   request_headers = {}
    response = {
       code = response_code,
       headers = response_headers,

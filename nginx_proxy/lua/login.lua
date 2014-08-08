@@ -1,22 +1,25 @@
 package.path = package.path..";"..ngx.var.lua_lib_dir.."/?.lua"
 
+local config = require "config"
+local logger = require "logger"
 local randomizer = require "randomizer"
+local cookie_manager = require "cookie_manager"
 
-local client_id = ngx.var.client_id
-local oauth_authorize_url = ngx.var.authorize_url
-local oauth_callback_url = ngx.var.callback_url
-local scope = ngx.var.scope
 local state = randomizer.generate(16)
-local expires = ngx.cookie_time(tonumber(ngx.time()) + 300)
-ngx.header["Set-Cookie"] = "oauth_state="..state..";path=/;expires="..expires
+local expires_at_unix_timestamp = tonumber(os.date("%s")) + config.oauth.state_expire_seconds
+local expires = ngx.cookie_time(expires_at_unix_timestamp)
+
+logger.debug("login.lua", "expires:", expires)
+cookie_manager.set("oauth_state", state, {path = "/", expires = expires})
+logger.debug("login.lua", "Set-Cookie header", ngx.header["Set-Cookie"])
 
 local request_params = {
-   client_id = client_id,
-   redirect_uri = oauth_callback_url,
+   client_id = config.oauth.client_id,
+   redirect_uri = config.oauth.callback_url,
    response_type = "code",
-   scope = scope,
+   scope = config.oauth.scope,
    state = state
 }
 local params_string = ngx.encode_args(request_params)
-local url = oauth_authorize_url.."?"..params_string
+local url = config.oauth.authorize_url.."?"..params_string
 ngx.redirect(url)

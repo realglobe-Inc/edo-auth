@@ -1,6 +1,7 @@
 package.path = package.path..";"..ngx.var.lua_lib_dir.."/?.lua"
 
 require "cjson"
+local config = require "config"
 local logger = require "logger"
 local redis = require "redis"
 local exiter = require "exiter"
@@ -36,13 +37,13 @@ end
 
 ngx.req.set_header("X-OAUTH-ACCESS-TOKEN", access_token)
 
--- TODO
--- if ngx.var.force_login and access_token == nil then
-if false then
-   if ngx.var.uri == ngx.var.oauth_login_endpoint then
+if config.oauth.force_login and access_token == nil then
+   logger.debug("add_header.lua", "request_url:", ngx.var.uri)
+   logger.debug("add_header.lua", "redirect_to login_path:", config.oauth.login_path)
+   if ngx.var.uri == config.oauth.login_path then
       -- TODO error message
       exiter.exit("request path is login_endpoint")
    else
-      ngx.redirect(ngx.var.oauth_login_endpoint)
+      ngx.redirect(config.oauth.login_path)
    end
 end
