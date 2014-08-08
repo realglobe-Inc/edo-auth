@@ -150,3 +150,5 @@ make install
 
 mkdir $nginx_dir/conf/oauth2
 cp $auth_module_dir/nginx.conf/nginx.conf.sample $nginx_dir/conf/oauth2/nginx.conf
+
+./print_config.sh > lua/lib/config.lua
