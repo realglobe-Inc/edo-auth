@@ -1,6 +1,6 @@
 #!/bin/bash
 
-auth_module_dir=`dirname $0`
+auth_module_dir=$(cd $(dirname $0) && pwd)
 src_dir=$auth_module_dir/src
 lib_dir=$auth_module_dir/lib
 
@@ -22,13 +22,6 @@ cd $redis_dir/bin
 cp $auth_module_dir/redis.conf .
 $redis_dir/bin/redis-server redis.conf
 
-# lua-resty-redis
-cd $src_dir
-git clone https://github.com/openresty/lua-resty-redis.git
-cd lua-resty-redis/
-git checkout c49ba7c
-cp -rf lib/resty $luajit_dir/share/lua/5.1/
-
 # LuaJIT
 cd $src_dir
 wget http://luajit.org/download/LuaJIT-2.0.3.tar.gz
@@ -36,6 +29,13 @@ tar zxf LuaJIT-2.0.3.tar.gz
 cd LuaJIT-2.0.3
 make PREFIX=$luajit_dir
 make install PREFIX=$luajit_dir
+
+# lua-resty-redis
+cd $src_dir
+git clone https://github.com/openresty/lua-resty-redis.git
+cd lua-resty-redis/
+git checkout c49ba7c
+cp -rf lib/resty $luajit_dir/share/lua/5.1/
 
 # lua-cjson
 cd $src_dir
@@ -151,4 +151,5 @@ make install
 mkdir $nginx_dir/conf/oauth2
 cp $auth_module_dir/nginx.conf/nginx.conf.sample $nginx_dir/conf/oauth2/nginx.conf
 
+cd $auth_module_dir
 ./print_config.sh > lua/lib/config.lua
