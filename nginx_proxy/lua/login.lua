@@ -2,10 +2,10 @@ package.path = package.path..";"..ngx.var.lua_lib_dir.."/?.lua"
 
 local config = require "config"
 local logger = require "logger"
-local randomizer = require "randomizer"
+local openssl_rsa = require "openssl_rsa"
 local cookie_manager = require "cookie_manager"
 
-local state = randomizer.generate(16)
+local state = openssl_rsa.random_string(16)
 local expires_at_unix_timestamp = tonumber(os.date("%s")) + config.oauth.state_expire_seconds
 local expires = ngx.cookie_time(expires_at_unix_timestamp)
 
