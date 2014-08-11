@@ -11,9 +11,12 @@ local session_key = ngx.var.cookie_oauth_session_key
 local access_token
 
 logger.debug("add_header.lua", "session_key:", session_key)
+logger.debug("add_header.lua", "redis", redis)
 
 if session_key and session_key ~= "" then
-   access_token = redis.get(session_key)
+   local client = redis:new()
+   logger.debug("add_header.lua", "client", client)
+   access_token = client:get(session_key)
 end
 
 -- TODO

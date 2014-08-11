@@ -13,6 +13,8 @@ if request_params["state"] == ngx.var.cookie_oauth_state then
    local req_params = {
       client_id = config.oauth.client_id,
       client_secret = config.oauth.client_secret,
+      grant_type = "authorization_code",
+      redirect_url = config.oauth.callback_url,
       code = request_params["code"]
    }
    local request_body = ngx.encode_args(req_params)
@@ -27,7 +29,10 @@ if request_params["state"] == ngx.var.cookie_oauth_state then
       expires_in = config.oauth.access_token_default_expires_in
    end
    local expires = ngx.cookie_time(tonumber(os.date("%s")) + expires_in)
-   if redis.setex(session_key, access_token, expires_in) then
+   logger.debug("callback.lua", "redis", redis)
+   local client = redis:new()
+   logger.debug("callback.lua", "client", client)
+   if client:setex(session_key, access_token, expires_in) then
       cookie_manager.set("oauth_session_key", session_key, {path = "/", expires = expires})
       ngx.req.set_header("X-OAUTH-ACCESS-TOKEN", access_token)
    else
