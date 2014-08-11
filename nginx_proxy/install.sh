@@ -39,8 +39,9 @@ cp -rf lib/resty $luajit_dir/share/lua/5.1/
 
 # lua-cjson
 cd $src_dir
-git clone https://github.com/efelix/lua-cjson.git
+git clone https://github.com/mpx/lua-cjson.git
 cd lua-cjson/
+git checkout 2.1.0
 make CFLAGS=-I$src_dir/LuaJIT-2.0.3/src
 make PREFIX=$luajit_dir install
 

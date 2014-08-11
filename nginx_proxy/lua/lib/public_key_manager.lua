@@ -1,4 +1,4 @@
-require "cjson"
+local json_safe = require "cjson.safe"
 local config = require "config"
 local logger = require "logger"
 local curl_wrapper = require "curl_wrapper"
@@ -17,10 +17,10 @@ local function download(key_uuid)
       "Content-Type: application/json"
    }
    curl_wrapper.set_headers(headers)
-   local response = curl_wrapper.post(config.public_key.api_endpoint, cjson.encode(params))
+   local response = curl_wrapper.post(config.public_key.api_endpoint, json_safe.encode(params))
    logger.debug("public_key_manager.lua", "response.body:", response.body)
    if response.body then
-      local response_object = cjson.decode(response.body)
+      local response_object = json_safe.decode(response.body)
       if not response_object["data"] then
          logger.err("public_key_manager.lua", "response_object.data not found")
          return

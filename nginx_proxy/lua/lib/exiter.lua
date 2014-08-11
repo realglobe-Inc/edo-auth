@@ -1,4 +1,4 @@
-require "cjson"
+local json_safe = require "cjson.safe"
 local logger = require "logger"
 
 return {
@@ -11,7 +11,7 @@ return {
       }
       ngx.status = 401
       ngx.header["Content-Type"] = "application/json"
-      ngx.say(cjson.encode(response_object))
+      ngx.say(json_safe.encode(response_object))
       ngx.exit(ngx.status)
    end
 }

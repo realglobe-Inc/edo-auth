@@ -1,6 +1,6 @@
 package.path = package.path..";"..ngx.var.lua_lib_dir.."/?.lua"
 
-require "cjson"
+local json_safe = require "cjson.safe"
 local config = require "config"
 local logger = require "logger"
 local redis = require "redis"
@@ -32,7 +32,7 @@ if false then
    local response = curl_wrapper.get(user_api_endpoint)
    logger.debug("add_header.lua", "response.body", response.body)
    if response.body then
-      local response_object = cjson.decode(response.body)
+      local response_object = json_safe.decode(response.body)
       -- TODO
       ngx.req.set_header("X-OAUTH-ID", response_object["id"])
    end
