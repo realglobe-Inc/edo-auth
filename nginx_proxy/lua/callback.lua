@@ -1,5 +1,6 @@
 package.path = package.path..";"..ngx.var.lua_lib_dir.."/?.lua"
 
+local json_safe = require "cjson.safe"
 local config = require "config"
 local logger = require "logger"
 local redis = require "redis"
@@ -18,9 +19,10 @@ if request_params["state"] == ngx.var.cookie_oauth_state then
       code = request_params["code"]
    }
    local request_body = ngx.encode_args(req_params)
+   curl_wrapper.set_headers({"Accept: application/json"})
    local response = curl_wrapper.post(config.oauth.access_token_endpoint, request_body)
    logger.debug("callback.lua", "response.body:", response.body)
-   local response_object = ngx.decode_args(response.body)
+   local response_object = json_safe.decode(response.body)
 
    local session_key = openssl_rsa.random_string(32)
    local access_token = response_object["access_token"]
