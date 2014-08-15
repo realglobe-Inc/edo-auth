@@ -25,6 +25,9 @@ local public_key_string = public_key_manager.get(private_key_uuid)
 if encoded_token then
    logger.debug("decrypt.lua", "encoded_token:", encoded_token)
    raw_token = openssl_rsa.base64_verify(encoded_token, public_key_string)
+   if not raw_token then
+      exiter.exit("can not decode X-EDO-Auth-Encoded-Token")
+   end
    logger.debug("decrypt.lua", "decoded_token:", raw_token)
 elseif raw_token and signed_token then
    logger.debug("decrypt.lua", "hash_function:", hash_function)
@@ -51,10 +54,10 @@ elseif config.rsa.token_lifetime then
    if math.abs(local_unix_timestamp - timestamp) > config.rsa.token_lifetime then
       exiter.exit("token lifetime is "..config.rsa.token_lifetime.." seconds")
    end
-else
-   ngx.req.set_header("X-EDO-Sender-UUID", sender_uuid)
-   ngx.req.set_header("X-EDO-Receiver-UUID", receiver_uuid)
-   ngx.req.set_header("X-EDO-Timestamp", timestamp)
-
-   logger.debug("decrypt.lua", "decrypted")
 end
+
+ngx.req.set_header("X-EDO-Sender-UUID", sender_uuid)
+ngx.req.set_header("X-EDO-Receiver-UUID", receiver_uuid)
+ngx.req.set_header("X-EDO-Timestamp", timestamp)
+
+logger.debug("decrypt.lua", "decrypted")

@@ -4,7 +4,11 @@ edo-auth
 ### 設置方法
 
 nginx_proxy/install.sh を参照。  
-その後、nginx.conf を適切に設定し nginx を起動する。  
+その後、nginx_proxy/lua/lib/config.lua と nginx.conf を適切に設定し nginx を起動する。  
+
+### テスト
+
+nginx_proxy/test.sh を参照。  
 
 ### SSO(OAuth2)モジュール
 

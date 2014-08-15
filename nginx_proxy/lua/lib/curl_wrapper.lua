@@ -22,6 +22,7 @@ local callback_options = {
       else
          local _, _, key, value = str:find("(.*):%s*([^%c]*)")
          if key then
+            logger.debug("curl_wrapper.lua", "response_headers", key..":", value)
             response_headers[key] = value
          end
       end
@@ -52,6 +53,10 @@ return {
       request_headers = headers
    end,
    get = function(url)
+      logger.debug("curl_wrapper.lua", "url:", url)
+      for key, val in pairs(request_headers) do
+         logger.debug("curl_wrapper.lua", "headers", "key:", key, "val:", val)
+      end
       initialize(url)
       perform()
       return response

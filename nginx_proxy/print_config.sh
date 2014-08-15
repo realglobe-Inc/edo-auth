@@ -5,7 +5,7 @@ return {
    service_uuid = "service-uuid", -- TODO
    redis = {
       unix_socket_path = "unix:`pwd`/lib/redis/bin/redis.sock",
-      connection_timeout_millisec = 1000
+--      connection_timeout_millisec = 1000
    },
    public_key = {
       local_storage_directory = "`pwd`/tmp/public_keys",
