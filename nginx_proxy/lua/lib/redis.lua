@@ -27,9 +27,9 @@ end
 
 local function get(self, key)
    logger.debug("redis.lua", "get: key =", key)
-   self:initialize()
+   initialize(self)
    local value, err = self.client:get(key)
-   self:close()
+   close(self)
    if err then
       logger.err("redis.lua", "get:", err)
    elseif value == ngx.null then
@@ -44,9 +44,9 @@ local function setex(self, key, value, expire)
    logger.debug("redis.lua", "setex: key =", key)
    logger.debug("redis.lua", "setex: value =", value)
    logger.debug("redis.lua", "setex: expire =", expire)
-   self:initialize()
+   initialize(self)
    local _, err = self.client:setex(key, expire, value)
-   self:close()
+   close(self)
    if err then
       logger.err("redis.lua", "setex:", err)
    else
@@ -56,12 +56,10 @@ end
 
 return {
    new = function(self)
-      return {
-         client,
-         initialize = initialize,
-         close = close,
+      new_object = {
          get = get,
          setex = setex
       }
+      return new_object
    end
 }
