@@ -18,7 +18,7 @@ local access_token_request_params = {
    client_id = config.oauth.client_id,
    client_secret = config.oauth.client_secret,
    grant_type = "authorization_code",
-   redirect_url = config.oauth.callback_url,
+   redirect_uri = config.oauth.callback_url,
    code = request_params["code"]
 }
 local request_body = ngx.encode_args(access_token_request_params)
@@ -37,20 +37,20 @@ if response_object["error"] then
    exiter.exit(error_message)
 elseif not access_token then
    exiter.exit("no access_token")
+end
+
+local session_key = openssl_rsa.random_string(32)
+local expires_in = response_object["expires_in"]
+if not expires_in then
+   expires_in = config.oauth.access_token_default_expires_in
+end
+local expires = ngx.cookie_time(tonumber(os.date("%s")) + expires_in)
+local redis_client = redis:new()
+if redis_client:setex(session_key, access_token, expires_in) then
+   cookie_manager.set("oauth_session_key", session_key, {path = "/", expires = expires})
+   ngx.req.set_header("X-OAUTH-ACCESS-TOKEN", access_token)
 else
-   local session_key = openssl_rsa.random_string(32)
-   local expires_in = response_object["expires_in"]
-   if not expires_in then
-      expires_in = config.oauth.access_token_default_expires_in
-   end
-   local expires = ngx.cookie_time(tonumber(os.date("%s")) + expires_in)
-   local redis_client = redis:new()
-   if redis_client:setex(session_key, access_token, expires_in) then
-      cookie_manager.set("oauth_session_key", session_key, {path = "/", expires = expires})
-      ngx.req.set_header("X-OAUTH-ACCESS-TOKEN", access_token)
-   else
-      exiter.exit("error")
-   end
+   exiter.exit("error")
 end
 
 ngx.redirect(config.oauth.after_login_path)
