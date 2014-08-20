@@ -16,8 +16,9 @@ local function download(key_uuid)
    local headers = {
       "Content-Type: application/json"
    }
-   curl_wrapper.set_headers(headers)
-   local response = curl_wrapper.post(config.public_key.api_endpoint, json_safe.encode(params))
+   local curl_client = curl_wrapper:new()
+   curl_client:set_headers(headers)
+   local response = curl_client:post(config.public_key.api_endpoint, json_safe.encode(params))
    logger.debug("public_key_manager.lua", "response.body:", response.body)
    if response.body then
       local response_object = json_safe.decode(response.body)

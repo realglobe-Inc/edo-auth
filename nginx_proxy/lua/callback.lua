@@ -22,8 +22,9 @@ local access_token_request_params = {
    code = request_params["code"]
 }
 local request_body = ngx.encode_args(access_token_request_params)
-curl_wrapper.set_headers({"Accept: application/json"})
-local response = curl_wrapper.post(config.oauth.access_token_endpoint, request_body)
+local curl_client = curl_wrapper:new()
+curl_client:set_headers({"Accept: application/json"})
+local response = curl_client:post(config.oauth.access_token_endpoint, request_body)
 logger.debug("callback.lua", "response.body:", response.body)
 local response_object = json_safe.decode(response.body)
 
@@ -43,8 +44,8 @@ else
       expires_in = config.oauth.access_token_default_expires_in
    end
    local expires = ngx.cookie_time(tonumber(os.date("%s")) + expires_in)
-   local client = redis:new()
-   if client:setex(session_key, access_token, expires_in) then
+   local redis_client = redis:new()
+   if redis_client:setex(session_key, access_token, expires_in) then
       cookie_manager.set("oauth_session_key", session_key, {path = "/", expires = expires})
       ngx.req.set_header("X-OAUTH-ACCESS-TOKEN", access_token)
    else

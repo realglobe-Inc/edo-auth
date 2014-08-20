@@ -1,70 +1,85 @@
 require "cURL"
 local logger = require "logger"
 
-local client = cURL.easy_init()
-local request_headers = {}
-local response_code
-local response_headers
-local response_body
-local response
-local callback_options = {
-   writefunction = function(str)
-      response_body = response_body..str
+local function initialize(self)
+   local function writefunction(str)
+      self.response_body = self.response_body..str
       logger.debug("curl_wrapper.lua", "data_unit_size:", str:len())
-      logger.debug("curl_wrapper.lua", "response_body_size:", response_body:len())
-   end,
-   headerfunction = function(str)
-      if not response_code then
+      logger.debug("curl_wrapper.lua", "response_body_size:", self.response_body:len())
+   end
+   local function headerfunction(str)
+      if not self.response_code then
          -- HTTP/1.1 200 OK
          local _, _, code_string = str:find("[^ ]* (%d*) .*")
-         response_code = tonumber(code_string) or 0
-         logger.debug("curl_wrapper.lua", "response_code:", response_code)
+         self.response_code = tonumber(code_string) or 0
+         logger.debug("curl_wrapper.lua", "response_code:", self.response_code)
       else
          local _, _, key, value = str:find("(.*):%s*([^%c]*)")
          if key then
             logger.debug("curl_wrapper.lua", "response_headers", key..":", value)
-            response_headers[key] = value
+            self.response_headers[key] = value
          end
       end
    end
-}
 
-local function initialize(url)
-   response_code = nil
-   response_headers = {}
-   response_body = ""
-   client:setopt_url(url)
-   client:setopt_verbose(1)
-end
-
-local function perform()
-   client:setopt_httpheader(request_headers)
-   client:perform(callback_options)
-   request_headers = {}
-   response = {
-      code = response_code,
-      headers = response_headers,
-      body = response_body
+   self.client = cURL.easy_init()
+   self.request_headers = {}
+   self.response_code = nil
+   self.response_headers = {}
+   self.response_body = ""
+   self.client:setopt_verbose(1)
+   self.callback_options = {
+      writefunction = writefunction,
+      headerfunction = headerfunction
    }
 end
 
+local function set_url(self, url)
+   logger.debug("curl_wrapper.lua", "url:", url)
+   for key, val in pairs(self.request_headers) do
+      logger.debug("curl_wrapper.lua", "headers", "key:", key, "val:", val)
+   end
+   self.client:setopt_url(url)
+end
+
+local function perform(self)
+   self.client:setopt_httpheader(self.request_headers)
+   self.client:perform(self.callback_options)
+   self.response = {
+      code = self.response_code,
+      headers = self.response_headers,
+      body = self.response_body
+   }
+   initialize(self)
+end
+
+local function set_headers(self, headers)
+   self.request_headers = headers
+end
+
+local function get(self, url)
+   logger.debug("curl_wrapper.lua", "GET")
+   set_url(self, url)
+   perform(self)
+   return self.response
+end
+
+local function post(self, url, request_body)
+   logger.debug("curl_wrapper.lua", "POST")
+   set_url(self, url)
+   self.client:setopt_postfields(request_body)
+   perform(self)
+   return self.response
+end
+
 return {
-   set_headers = function(headers)
-      request_headers = headers
-   end,
-   get = function(url)
-      logger.debug("curl_wrapper.lua", "url:", url)
-      for key, val in pairs(request_headers) do
-         logger.debug("curl_wrapper.lua", "headers", "key:", key, "val:", val)
-      end
-      initialize(url)
-      perform()
-      return response
-   end,
-   post = function(url, request_body)
-      initialize(url)
-      client:setopt_postfields(request_body)
-      perform()
-      return response
+   new = function(self)
+      new_object = {
+         set_headers = set_headers,
+         get = get,
+         post = post
+      }
+      initialize(new_object)
+      return new_object
    end
 }

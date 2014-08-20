@@ -14,9 +14,9 @@ logger.debug("add_header.lua", "session_key:", session_key)
 logger.debug("add_header.lua", "redis", redis)
 
 if session_key and session_key ~= "" then
-   local client = redis:new()
-   logger.debug("add_header.lua", "client", client)
-   access_token = client:get(session_key)
+   local redis_client = redis:new()
+   logger.debug("add_header.lua", "redis_client", redis_client)
+   access_token = redis_client:get(session_key)
 end
 
 -- TODO
@@ -28,8 +28,9 @@ if false then
       "User-Agent: curl/"..cURL.version_info().version,
       "Authorization: token "..access_token,
    }
-   curl_wrapper.set_headers(headers)
-   local response = curl_wrapper.get(user_api_endpoint)
+   local curl_client = curl_wrapper:new()
+   curl_client:set_headers(headers)
+   local response = curl_client:get(user_api_endpoint)
    logger.debug("add_header.lua", "response.body", response.body)
    if response.body then
       local response_object = json_safe.decode(response.body)
