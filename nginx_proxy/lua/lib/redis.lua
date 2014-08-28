@@ -54,11 +54,24 @@ local function setex(self, key, value, expire)
    end
 end
 
+local function del(self, key)
+   logger.debug("redis.lua", "del: key =", key)
+   initialize(self)
+   local value, err = self.client:del(key)
+   close(self)
+   if err then
+      logger.err("redis.lua", "del:", err)
+   else
+      logger.debug("redis.lua", "value:", value)
+   end
+end
+
 return {
    new = function(self)
       new_object = {
          get = get,
-         setex = setex
+         setex = setex,
+         del = del
       }
       return new_object
    end

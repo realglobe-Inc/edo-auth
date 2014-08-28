@@ -1,5 +1,6 @@
 {
   "access_token": "test_access_token",
+  "id_token": "test_id_token",
   "token_type": "bearer",
   "scope": "user"
 }

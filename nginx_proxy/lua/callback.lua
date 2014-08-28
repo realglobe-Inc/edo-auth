@@ -3,11 +3,11 @@ package.path = package.path..";"..ngx.var.lua_lib_dir.."/?.lua"
 local json_safe = require "cjson.safe"
 local config = require "config"
 local logger = require "logger"
-local redis = require "redis"
 local openssl_rsa = require "openssl_rsa"
 local curl_wrapper = require "curl_wrapper"
 local cookie_manager = require "cookie_manager"
 local exiter = require "exiter"
+local token_manager = require "token_manager"
 
 local request_params = ngx.req.get_uri_args()
 if request_params["state"] ~= ngx.var.cookie_oauth_state then
@@ -29,6 +29,7 @@ logger.debug("callback.lua", "response.body:", response.body)
 local response_object = json_safe.decode(response.body)
 
 local access_token = response_object["access_token"]
+local id_token = response_object["id_token"]
 if response_object["error"] then
    local error_message = response_object["error"]
    if response_object["error_description"] then
@@ -45,10 +46,12 @@ if not expires_in then
    expires_in = config.oauth.access_token_default_expires_in
 end
 local expires = ngx.cookie_time(tonumber(os.date("%s")) + expires_in)
-local redis_client = redis:new()
-if redis_client:setex(session_key, access_token, expires_in) then
+if token_manager.access_token.set(session_key, access_token, expires_in) then
    cookie_manager.set("oauth_session_key", session_key, {path = "/", expires = expires})
-   ngx.req.set_header("X-OAUTH-ACCESS-TOKEN", access_token)
+   if id_token then
+      -- TODO
+      token_manager.id_token.set(session_key, id_token, expires_in)
+   end
 else
    exiter.exit("error")
 end

@@ -18,6 +18,7 @@ cd lua/test
 test lib/cookie_manager_test.lua
 test lib/exiter_test.lua
 test lib/redis_mock_test.lua
+test lib/token_manager_test.lua
 
 # test http
 test http/login_test.lua
