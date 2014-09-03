@@ -76,7 +76,7 @@ cd $src_dir
 wget http://www.openssl.org/source/openssl-1.0.1h.tar.gz
 tar zxf openssl-1.0.1h.tar.gz
 cd openssl-1.0.1h
-./config --prefix=$lib_dir/openssl/ssl -fPIC shared zlib threads
+./config --prefix=$lib_dir/openssl/ssl -fPIC shared zlib-dynamic threads
 make
 make install
 
