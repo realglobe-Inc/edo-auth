@@ -29,5 +29,11 @@ return {
       local encrypted_data = ngx.decode_base64(base64_encrypted_data)
       local public_key = openssl.pkey.read(public_key_string, true)
       return public_key:verify(raw_data, encrypted_data, hash_function)
+   end,
+   sign_base64 = function(data, private_key_string, hash_type)
+      hash_type = hash_type or "sha1"
+      local private_key = openssl.pkey.read(private_key_string)
+      local sign = private_key:sign(data)
+      return ngx.encode_base64(sign)
    end
 }

@@ -8,7 +8,7 @@ local function public_key_file_path(key_uuid)
 end
 
 local function download(key_uuid)
-   local public_key_string
+   local public_key_string = nil
    local params = {
       auth_key = "uGtY9kA5DLqdA8IpppzeSKKEKKbt0yfr",
       public_key_uuid = key_uuid
@@ -22,11 +22,17 @@ local function download(key_uuid)
    logger.debug("public_key_manager.lua", "response.body:", response.body)
    if response.body then
       local response_object = json_safe.decode(response.body)
-      if not response_object["data"] then
+      if response_object["data"] then
+         public_key_string = response_object["data"]["public_key"]
+      elseif response_object["service"] then
+         public_key_string = response_object["service"]["public_key"]
+      end
+
+      if not public_key_string then
          logger.err("public_key_manager.lua", "response_object.data not found")
          return
       end
-      public_key_string = response_object["data"]["public_key"]
+
       local fd, err = io.open(public_key_file_path(key_uuid), "w")
       if fd then
          fd:write(public_key_string)
