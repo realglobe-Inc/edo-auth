@@ -25,7 +25,7 @@ return {
       access_token_default_expires_in = 3600,
       -- login_path, after_login_path は使わない。
       id_provider_registry_uri = "http://localhost:9001/", -- id-provider-attribute-registry
-      private_key_directory = "/home/mui/work.git/src/github.com/realglobe-Inc/edo-auth/nginx_proxy/sample/"
+      private_key_directory = "/home/mui/work.git/src/github.com/realglobe-Inc/edo-auth/nginx_proxy/sample/private_key"
    },
    rsa = {
       token_lifetime = 600
