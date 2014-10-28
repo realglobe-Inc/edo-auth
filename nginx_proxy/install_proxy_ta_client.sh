@@ -188,7 +188,7 @@ port $redis_port
 EOF
 fi
 if ! nc -z localhost $nginx_port; then
-    ./lib/nginx_${nginx_ver}/sbin/nginx
+    ${nginx_dir}/sbin/nginx
 fi
 
 echo "----- FINISHED -----"
