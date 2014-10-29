@@ -1,6 +1,49 @@
 edo-auth
 =======
 
+
+TA 認証
+---
+
++ [nginx_proxy/lua/auth_ta.lua](nginx_proxy/lua/auth_ta.lua): Lua による TA 認証用 nginx モジュール。
++ [nginx_proxy/install_auth_ta.sh](nginx_proxy/install_auth_ta.sh): TA 認証を組み込んだ nginx をセットアップするスクリプト。
++ [nginx_proxy/test_auth_ta.sh](nginx_proxy/test_auth_ta.sh): TA 認証を組み込んだ nginx の動作チェック用スクリプト。
+    + [nginx_proxy/sample/public_key/auth-ta-checker-no-id.pub.pem](nginx_proxy/sample/public_key/auth-ta-checker-no-id.pub.pem): 検証用公開鍵。
+    + [nginx_proxy/sample/private_key/auth-ta-checker-no-id.pem](nginx_proxy/sample/private_key/auth-ta-checker-no-id.pem): 署名用秘密鍵。
++ [nginx_proxy/sample/nginx.auth_ta.conf](nginx_proxy/sample/nginx.auth_ta.conf): TA 認証を組み込んだ nginx.conf の例。
+  install_auth_ta.sh のデフォルト設定。
+
+
+### 設置
+nginx_proxy/install_auth_ta.sh を実行すると、nginx_proxy/lib 以下に必要なプログラムがインストールされ、実行される。
+
+
+### 設定
+nginx_proxy/sample/nginx.auth_ta.conf を参照。
+基本的に、nginx.conf の中で auth_ta.lua を読み込む前に、
+
+    set $edo_auth_<パラメータ名> <値>;
+
+の形で設定する。
+パラメータは nginx_proxy/lua/auth_ta.lua の前の方に列挙してある。
+
+### 動作
+仕様は [edo/doc/spec_edo_auth_ta.md](https://github.com/realglobe-Inc/edo/blob/development/doc/spec_edo_auth_ta.md) を参照。
+ただし、現状、TA 検証用公開鍵の取得はファイルからのみで、外部からは取得しない。
+
+
+アカウント認証
+---
+未定
+
+
+---
+
+
+add_header.lua, decrypt.lua, login.lua, callback.lua 等
+---
+仕様模索段階でのプロトタイプ。
+
 ### 設置方法
 
 nginx_proxy/install.sh を参照。  
@@ -71,3 +114,9 @@ $ signed_token=`printf ${auth_token} | openssl dgst -sign /path/to/private.key -
 
 $ curl https://edo-service.com/ -H "X-EDO-Private-Key-UUID: ${private_key_uuid}" -H "X-EDO-Auth-Token: ${auth_token}" -H "X-EDO-Auth-Signed-Token: ${signed_token}" -H "X-EDO-Hash-Function: sha256" -H "X-EDO-Auth-Params: ..."
 ```
+
+
+proxy.lua 等
+---
+location を分けずに動かすのを前提とした試作。
+独自のアカウント認証に対応する。
