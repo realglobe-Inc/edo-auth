@@ -45,7 +45,7 @@ EOF
 
 
     # 認証中。
-    TA="ta-client-auth-checker-no-id"
+    TA="auth-ta-checker-no-id"
     SESSION="abcde"
     TOKEN="ABCDE"
     HASH="sha256"

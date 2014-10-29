@@ -175,7 +175,7 @@ nginx_dir=$lib_dir/nginx_$nginx_ver
             make
             make install
 
-            cp $auth_module_dir/sample/nginx.proxy_ta_client.conf $nginx_dir/conf/nginx.conf
+            cp $auth_module_dir/sample/nginx.auth_ta.conf $nginx_dir/conf/nginx.conf
         )
     fi
 )
