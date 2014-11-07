@@ -13,6 +13,8 @@ lua_nginx_ver=${lua_nginx_ver:=v0.9.9}
 #nginx_ver=${nginx_ver:=1.7.6}
 nginx_ver=${nginx_ver:=1.7.4}
 
+redis=${redis:=true}
+nginx=${nginx:=true}
 redis_port=${redis_port:=6379}
 nginx_port=${nginx_port:=7000}
 
@@ -31,10 +33,10 @@ nginx_dir=${lib_dir}/nginx_${nginx_ver}
 
 (cd ${src_dir}
     # redis
-    if ! [ -d redis ]; then
+    if ${redis} && ! [ -d redis ]; then
         git clone https://github.com/antirez/redis.git
     fi
-    if ! [ -d $redis_dir ]; then
+    if ${redis} && ! [ -d ${redis_dir} ]; then
         (cd redis
             git fetch
             git checkout ${redis_ver}
@@ -179,13 +181,13 @@ nginx_dir=${lib_dir}/nginx_${nginx_ver}
 )
 
 
-if ! nc -z localhost ${redis_port}; then
+if ${redis} && ! nc -z localhost ${redis_port}; then
     ${redis_dir}/bin/redis-server - <<EOF
 daemonize yes
 port ${redis_port}
 EOF
 fi
-if ! nc -z localhost ${nginx_port}; then
+if ${nginx} && ! nc -z localhost ${nginx_port}; then
     ${nginx_dir}/sbin/nginx
 fi
 
