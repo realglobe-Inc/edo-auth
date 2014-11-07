@@ -191,4 +191,4 @@ if ${nginx} && ! nc -z localhost ${nginx_port}; then
     ${nginx_dir}/sbin/nginx
 fi
 
-echo "----- FINISHED -----"
+echo "---------- Finished ----------"
