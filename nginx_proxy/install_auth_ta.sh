@@ -1,22 +1,20 @@
 #!/bin/sh -e
 
-redis_ver=2.8.17
-#redis_ver=2.8.12
-luajit_ver=2.0.3
-lua_redis_ver=c49ba7c
-lua_cjson_ver=2.1.0
-openssl_ver=1.0.1i
-#openssl_ver=1.0.1h
-#lua_openssl_ver=3f4c8a9
-lua_openssl_ver=1d5c3be
-headers_more_ver=v0.25
-ngx_devel_kit_ver=v0.2.19
-lua_nginx_ver=v0.9.9
-#nginx_ver=1.7.6
-nginx_ver=1.7.4
+redis_ver=${redis_ver:=2.8.17}
+luajit_ver=${luajit_ver:=2.0.3}
+lua_redis_ver=${lua_redis_ver:=c49ba7c}
+lua_cjson_ver=${lua_cjson_ver:=2.1.0}
+openssl_ver=${openssl_ver:=1.0.1i}
+#lua_openssl_ver=${lua_openssl_ver:=3f4c8a9}
+lua_openssl_ver=${lua_openssl_ver:=1d5c3be}
+headers_more_ver=${headers_more_ver:=v0.25}
+ngx_devel_kit_ver=${ngx_devel_kit_ver:=v0.2.19}
+lua_nginx_ver=${lua_nginx_ver:=v0.9.9}
+#nginx_ver=${nginx_ver:=1.7.6}
+nginx_ver=${nginx_ver:=1.7.4}
 
-redis_port=6379
-nginx_port=7000
+redis_port=${redis_port:=6379}
+nginx_port=${nginx_port:=7000}
 
 
 auth_module_dir=$(cd $(dirname $0) && pwd)
