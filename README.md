@@ -31,6 +31,18 @@ nginx_proxy/sample/nginx.auth_ta.conf を参照。
 仕様は [edo/doc/spec_edo_auth_ta.md](https://github.com/realglobe-Inc/edo/blob/development/doc/spec_edo_auth_ta.md) を参照。
 ただし、現状、TA 検証用公開鍵の取得はファイルからのみで、外部からは取得しない。
 
+#### TA 検証用公開鍵の取得
+現状、ローカルファイルか redis にキャッシュされている鍵のみ読める。
+ローカルファイルは、nginx.conf で $edo_auth_public_key_directory に設定したディレクトリ内に &lt;TA の ID&gt;.pub.pem のファイル名で置く。
+中身は PEM 形式。
+
+ローカルファイルをリモートと同期するような機能は無いので、必要ならば別口で行う。
+例えば、
+
+    wget -N -r -l 1 -P /var/edo/ta/public_key -nH --cut-dirs=3 --no-parent -R 'index.html?*' https://example.org/edo/ta/public_key/
+
+のようなコマンドを cron で定期的に実行する。
+
 
 アカウント認証
 ---
