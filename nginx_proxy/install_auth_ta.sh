@@ -167,6 +167,7 @@ nginx_dir=${lib_dir}/nginx_${nginx_ver}
                 --with-http_realip_module \
                 --with-http_spdy_module \
                 --with-http_ssl_module \
+                --with-http_sub_module \
                 --with-ld-opt="-Wl,-rpath=${luajit_dir}/lib" \
                 --with-openssl=${src_dir}/openssl-${openssl_ver} \
                 --add-module=${src_dir}/headers-more-nginx-module \
