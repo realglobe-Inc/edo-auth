@@ -30,6 +30,7 @@ redis_dir=${lib_dir}/redis
 luajit_dir=${lib_dir}/lua-jit
 nginx_dir=${lib_dir}/nginx_${nginx_ver}
 
+nginx_prefix=${nginx_prefix:=${nginx_dir}}
 
 (cd ${src_dir}
     # redis
@@ -162,7 +163,7 @@ nginx_dir=${lib_dir}/nginx_${nginx_ver}
             export LUAJIT_LIB=${luajit_dir}/lib
             export LUAJIT_INC=${luajit_dir}/include/luajit-2.0 # LuaJIT が 2.0.x じゃなくなったら変更？
             ./configure \
-                --prefix=${nginx_dir} \
+                --prefix=${nginx_prefix} \
                 --with-http_gzip_static_module \
                 --with-http_realip_module \
                 --with-http_spdy_module \

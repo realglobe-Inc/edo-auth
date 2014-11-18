@@ -90,7 +90,7 @@ local function exit(err, redis_client)
    -- レスポンスの中身を準備できた。
    ngx.log(ngx.ERR, "respond " .. err.status .. ": " .. err.message)
 
-   ngx.header["X-Edo-Ta-Auth-Error"] = err.message
+   ngx.header["X-Edo-Auth-Ta-Error"] = err.message
    ngx.header["Content-Type"] = "application/json"
    ngx.header["Content-Length"] = string.len(body) .. ""
    ngx.status = err.status
@@ -351,8 +351,8 @@ local function start_session()
    -- セッションを登録した。
    ngx.log(log_level, "session began")
 
-   set_cookie("X-Edo-Ta-Session", session.id, {Path = cookie_path, Expires = ngx.http_time(ngx.time() + session_expires_in)})
-   ngx.header["X-Edo-Ta-Token"] = session.token
+   set_cookie("X-Edo-Auth-Ta-Session", session.id, {Path = cookie_path, Expires = ngx.http_time(ngx.time() + session_expires_in)})
+   ngx.header["X-Edo-Auth-Ta-Token"] = session.token
 
    return exit({status = ngx.HTTP_UNAUTHORIZED, message = "start new session"}, redis_client)
 end
@@ -377,7 +377,7 @@ local function through(session)
    -- リクエスト元はセッション相手で間違いなかった。
    ngx.log(log_level, "authenticated request source is session client")
 
-   filter_cookie("X-Edo-Ta-Session", session.id)
+   filter_cookie("X-Edo-Auth-Ta-Session", session.id)
    ngx.req.set_header("X-Edo-Ta-Id", session.ta)
 
    local ok, err = redis_client:set_keepalive(redis_connection_keepalive, redis_connection_pool)
@@ -404,15 +404,15 @@ local function authenticate(session)
    -- リクエスト元はセッション相手で間違いなかった。
    ngx.log(log_level, "authenticating request source is session client")
 
-   local ta_id = ngx.var.http_x_edo_ta_id
+   local ta_id = ngx.var.http_x_edo_auth_ta_id
    if not ta_id then
       return exit({status = ngx.HTTP_FORBIDDEN, message = "no ta id"}, redis_client)
    end
-   local token_sign = ngx.var.http_x_edo_ta_token_sign
+   local token_sign = ngx.var.http_x_edo_auth_ta_token_sign
    if not token_sign then
       return exit({status = ngx.HTTP_FORBIDDEN, message = "no token sign"}, redis_client)
    end
-   local hash = ngx.var.http_x_edo_hash_function or default_hash
+   local hash = ngx.var.http_x_edo_auth_hash_function or default_hash
 
    -- 認証情報が揃ってた。
    ngx.log(log_level, "authentication data was found")
@@ -448,8 +448,8 @@ local function authenticate(session)
    -- セッションを認証済みに移行した。
    ngx.log(log_level, "session became authenticated")
 
-   filter_cookie("X-Edo-Ta-Session", session.id)
-   ngx.req.clear_header("X-Edo-Ta-Token-Sign")
+   filter_cookie("X-Edo-Auth-Ta-Session", session.id)
+   ngx.req.clear_header("X-Edo-Auth-Ta-Token-Sign")
    ngx.req.clear_header("X-Edo-Hash-Function")
 
    local ok, err = redis_client:set_keepalive(redis_connection_keepalive, redis_connection_pool)
@@ -470,7 +470,7 @@ if not ok then
 end
 
 
-local session_id = ngx.var["cookie_x-edo-ta-session"]
+local session_id = ngx.var["cookie_x-edo-auth-ta-session"]
 if not session_id then
    ngx.log(log_level, "session is not declared")
    return start_session()
