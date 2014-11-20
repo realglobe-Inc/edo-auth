@@ -1,8 +1,8 @@
 #!/bin/sh -e
 
-redis_port=6379
-nginx_port=7000
-nginx_ver=1.7.4
+redis_port=${redis_port:=6379}
+nginx_port=${nginx_port:=7000}
+nginx_ver=${nginx_ver:=1.7.4}
 
 # デバッグ用。
 redis_num () {
@@ -26,14 +26,14 @@ EOF
     # 未認証。
     TMP_FILE=/tmp/$(basename ${0%.*})$(date +"%y%m%d%H%M%S%N")
     curl -v http://localhost:${nginx_port}/ > ${TMP_FILE} 2>&1
-    if ! grep -q '< Set-Cookie:.* \+X-Edo-Ta-Session=' ${TMP_FILE}; then
-        echo "Error (unauthenticated): no X-Edo-Ta-Session in Cookie" 1>&2
+    if ! grep -q '< Set-Cookie:.* \+X-Edo-Auth-Ta-Session=' ${TMP_FILE}; then
+        echo "Error (unauthenticated): no X-Edo-Auth-Ta-Session in Cookie" 1>&2
         exit 1
-    elif ! grep -q '^< X-Edo-Ta-Token:' ${TMP_FILE}; then
-        echo "Error (unauthenticated): no X-Edo-Ta-Token" 1>&2
+    elif ! grep -q '^< X-Edo-Auth-Ta-Token:' ${TMP_FILE}; then
+        echo "Error (unauthenticated): no X-Edo-Auth-Ta-Token" 1>&2
         exit 1
-    elif ! grep -q '^< X-Edo-Ta-Auth-Error:' ${TMP_FILE}; then
-        echo "Error (unauthenticated): no X-Edo-Ta-Auth-Error" 1>&2
+    elif ! grep -q '^< X-Edo-Auth-Ta-Error:' ${TMP_FILE}; then
+        echo "Error (unauthenticated): no X-Edo-Auth-Ta-Error" 1>&2
         exit 1
     elif ! grep -q '^< HTTP/[0-9.]\+ 401 Unauthorized' ${TMP_FILE}; then
         echo "Error (unauthenticated): invalid status "$(grep '^< HTTP/[0-9.]\+ ' ${TMP_FILE})   1>&2
@@ -55,13 +55,13 @@ EOF
     ./lib/redis/bin/redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
     TMP_FILE=/tmp/$(basename ${0%.*})$(date +"%y%m%d%H%M%S%N")
     curl -v \
-        --cookie "X-Edo-Ta-Session"="${SESSION}" \
-        -H "X-Edo-Ta-Id: ${TA}" \
-        -H "X-Edo-Ta-Token-Sign: ${SIGN}" \
-        -H "X-Edo-Hash-Function: ${HASH}" \
+        --cookie "X-Edo-Auth-Ta-Session"="${SESSION}" \
+        -H "X-Edo-Auth-Ta-Id: ${TA}" \
+        -H "X-Edo-Auth-Ta-Token-Sign: ${SIGN}" \
+        -H "X-Edo-Auth-Hash-Function: ${HASH}" \
         http://localhost:${nginx_port}/ > ${TMP_FILE} 2>&1
-    if grep -q '^< X-Edo-Ta-Auth-Error:' ${TMP_FILE}; then
-        echo "Error (authenticating): "$(grep '^< X-Edo-Ta-Auth-Error:' ${TMP_FILE}) 1>&2
+    if grep -q '^< X-Edo-Auth-Ta-Error:' ${TMP_FILE}; then
+        echo "Error (authenticating): "$(grep '^< X-Edo-Auth-Ta-Error:' ${TMP_FILE}) 1>&2
         exit 1
     elif ! grep -q '^< HTTP/[0-9.]\+ \(502 Bad Gateway\|200 OK\)' ${TMP_FILE}; then
         # 502 Bad Gateway はプロキシ先を用意してないとき。
@@ -82,9 +82,9 @@ EOF
     ./lib/redis/bin/redis-cli -p ${redis_port} setex "session:authenticated:${SESSION}" 10 '{"auth":true,"id":"'${SESSION}'","ta":"12345","client":"127.0.0.1"}' > /dev/null
 
     TMP_FILE=/tmp/$(basename ${0%.*})$(date +"%y%m%d%H%M%S%N")
-    curl -v --cookie "X-Edo-Ta-Session"="${SESSION}" http://localhost:${nginx_port}/ > ${TMP_FILE} 2>&1
-    if grep -q '^< X-Edo-Ta-Auth-Error:' ${TMP_FILE}; then
-        echo "Error (authenticated): "$(grep '^< X-Edo-Ta-Auth-Error:' ${TMP_FILE}) 1>&2
+    curl -v --cookie "X-Edo-Auth-Ta-Session"="${SESSION}" http://localhost:${nginx_port}/ > ${TMP_FILE} 2>&1
+    if grep -q '^< X-Edo-Auth-Ta-Error:' ${TMP_FILE}; then
+        echo "Error (authenticated): "$(grep '^< X-Edo-Auth-Ta-Error:' ${TMP_FILE}) 1>&2
         exit 1
     elif ! grep -q '^< HTTP/[0-9.]\+ \(502 Bad Gateway\|200 OK\)' ${TMP_FILE}; then
         # 502 Bad Gateway はプロキシ先を用意してないとき。
@@ -102,9 +102,9 @@ EOF
     ./lib/redis/bin/redis-cli -p ${redis_port} setex "session:authenticated:${SESSION}" 10 '{"auth":true,"id":"'${SESSION}'","ta":"12345","client":"192.0.2.1"}' > /dev/null
 
     TMP_FILE=/tmp/$(basename ${0%.*})$(date +"%y%m%d%H%M%S%N")
-    curl -v --cookie "X-Edo-Ta-Session"="${SESSION}" http://localhost:${nginx_port}/ > ${TMP_FILE} 2>&1
-    if ! grep -q '^< X-Edo-Ta-Auth-Error:' ${TMP_FILE}; then
-        echo "Error (different source): no X-Edo-Ta-Auth-Error" 1>&2
+    curl -v --cookie "X-Edo-Auth-Ta-Session"="${SESSION}" http://localhost:${nginx_port}/ > ${TMP_FILE} 2>&1
+    if ! grep -q '^< X-Edo-Auth-Ta-Error:' ${TMP_FILE}; then
+        echo "Error (different source): no X-Edo-Auth-Ta-Error" 1>&2
         exit 1
     elif ! grep -q '^< HTTP/[0-9.]\+ 403 Forbidden' ${TMP_FILE}; then
         echo "Error (different source): invalid status "$(grep '^< HTTP/[0-9.]\+ ' ${TMP_FILE}) 1>&2
@@ -120,15 +120,15 @@ EOF
     ./lib/redis/bin/redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
     TMP_FILE=/tmp/$(basename ${0%.*})$(date +"%y%m%d%H%M%S%N")
     curl -v \
-        --cookie "X-Edo-Ta-Session"="${SESSION}" \
-        -H "X-Edo-Ta-Token-Sign: ${SIGN}" \
-        -H "X-Edo-Hash-Function: ${HASH}" \
+        --cookie "X-Edo-Auth-Ta-Session"="${SESSION}" \
+        -H "X-Edo-Auth-Ta-Token-Sign: ${SIGN}" \
+        -H "X-Edo-Auth-Hash-Function: ${HASH}" \
         http://localhost:${nginx_port}/ > ${TMP_FILE} 2>&1
-    if ! grep -q '^< X-Edo-Ta-Auth-Error:' ${TMP_FILE}; then
-        echo "Error (no X-Edo-Ta-Id): no X-Edo-Ta-Auth-Error" 1>&2
+    if ! grep -q '^< X-Edo-Auth-Ta-Error:' ${TMP_FILE}; then
+        echo "Error (no X-Edo-Auth-Ta-Id): no X-Edo-Auth-Ta-Error" 1>&2
         exit 1
     elif ! grep -q '^< HTTP/[0-9.]\+ 403 Forbidden' ${TMP_FILE}; then
-        echo "Error (no X-Edo-Ta-Id): invalid status "$(grep '^< HTTP/[0-9.]\+ ' ${TMP_FILE}) 1>&2
+        echo "Error (no X-Edo-Auth-Ta-Id): invalid status "$(grep '^< HTTP/[0-9.]\+ ' ${TMP_FILE}) 1>&2
         exit 1
     fi
     rm ${TMP_FILE}
@@ -136,15 +136,15 @@ EOF
     ./lib/redis/bin/redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
     TMP_FILE=/tmp/$(basename ${0%.*})$(date +"%y%m%d%H%M%S%N")
     curl -v \
-        --cookie "X-Edo-Ta-Session"="${SESSION}" \
-        -H "X-Edo-Ta-Id: ${TA}" \
-        -H "X-Edo-Hash-Function: ${HASH}" \
+        --cookie "X-Edo-Auth-Ta-Session"="${SESSION}" \
+        -H "X-Edo-Auth-Ta-Id: ${TA}" \
+        -H "X-Edo-Auth-Hash-Function: ${HASH}" \
         http://localhost:${nginx_port}/ > ${TMP_FILE} 2>&1
-    if ! grep -q '^< X-Edo-Ta-Auth-Error:' ${TMP_FILE}; then
-        echo "Error (no X-Edo-Ta-Token-Sign): no X-Edo-Ta-Auth-Error" 1>&2
+    if ! grep -q '^< X-Edo-Auth-Ta-Error:' ${TMP_FILE}; then
+        echo "Error (no X-Edo-Auth-Ta-Token-Sign): no X-Edo-Auth-Ta-Error" 1>&2
         exit 1
     elif ! grep -q '^< HTTP/[0-9.]\+ 403 Forbidden' ${TMP_FILE}; then
-        echo "Error (no X-Edo-Ta-Token-Sign): invalid status "$(grep '^< HTTP/[0-9.]\+ ' ${TMP_FILE}) 1>&2
+        echo "Error (no X-Edo-Auth-Ta-Token-Sign): invalid status "$(grep '^< HTTP/[0-9.]\+ ' ${TMP_FILE}) 1>&2
         exit 1
     fi
     rm ${TMP_FILE}
@@ -156,13 +156,13 @@ EOF
     ./lib/redis/bin/redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
     TMP_FILE=/tmp/$(basename ${0%.*})$(date +"%y%m%d%H%M%S%N")
     curl -v \
-        --cookie "X-Edo-Ta-Session"="${SESSION}" \
-        -H "X-Edo-Ta-Id: ${TA}-dewa-nai" \
-        -H "X-Edo-Ta-Token-Sign: ${SIGN}" \
-        -H "X-Edo-Hash-Function: ${HASH}" \
+        --cookie "X-Edo-Auth-Ta-Session"="${SESSION}" \
+        -H "X-Edo-Auth-Ta-Id: ${TA}-dewa-nai" \
+        -H "X-Edo-Auth-Ta-Token-Sign: ${SIGN}" \
+        -H "X-Edo-Auth-Hash-Function: ${HASH}" \
         http://localhost:${nginx_port}/ > ${TMP_FILE} 2>&1
-    if ! grep -q '^< X-Edo-Ta-Auth-Error:' ${TMP_FILE}; then
-        echo "Error (no public key): no X-Edo-Ta-Auth-Error" 1>&2
+    if ! grep -q '^< X-Edo-Auth-Ta-Error:' ${TMP_FILE}; then
+        echo "Error (no public key): no X-Edo-Auth-Ta-Error" 1>&2
         exit 1
     elif ! grep -q '^< HTTP/[0-9.]\+ 403 Forbidden' ${TMP_FILE}; then
         echo "Error (no public key): invalid status "$(grep '^< HTTP/[0-9.]\+ ' ${TMP_FILE}) 1>&2
@@ -177,13 +177,13 @@ EOF
     ./lib/redis/bin/redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
     TMP_FILE=/tmp/$(basename ${0%.*})$(date +"%y%m%d%H%M%S%N")
     curl -v \
-        --cookie "X-Edo-Ta-Session"="${SESSION}" \
-        -H "X-Edo-Ta-Id: ${TA}" \
-        -H "X-Edo-Ta-Token-Sign: "$(printf ${TOKEN}F | openssl dgst -${HASH} -binary | openssl pkeyutl -sign -inkey sample/private_key/${TA}.pem -pkeyopt digest:${HASH} | base64 | tr -d '\n') \
-        -H "X-Edo-Hash-Function: ${HASH}" \
+        --cookie "X-Edo-Auth-Ta-Session"="${SESSION}" \
+        -H "X-Edo-Auth-Ta-Id: ${TA}" \
+        -H "X-Edo-Auth-Ta-Token-Sign: "$(printf ${TOKEN}F | openssl dgst -${HASH} -binary | openssl pkeyutl -sign -inkey sample/private_key/${TA}.pem -pkeyopt digest:${HASH} | base64 | tr -d '\n') \
+        -H "X-Edo-Auth-Hash-Function: ${HASH}" \
         http://localhost:${nginx_port}/ > ${TMP_FILE} 2>&1
-    if ! grep -q '^< X-Edo-Ta-Auth-Error:' ${TMP_FILE}; then
-        echo "Error (invalid sign): no X-Edo-Ta-Auth-Error" 1>&2
+    if ! grep -q '^< X-Edo-Auth-Ta-Error:' ${TMP_FILE}; then
+        echo "Error (invalid sign): no X-Edo-Auth-Ta-Error" 1>&2
         exit 1
     elif ! grep -q '^< HTTP/[0-9.]\+ 403 Forbidden' ${TMP_FILE}; then
         echo "Error (invalid sign): invalid status "$(grep '^< HTTP/[0-9.]\+ ' ${TMP_FILE}) 1>&2
