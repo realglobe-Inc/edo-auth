@@ -149,8 +149,15 @@ end
 
 -- リクエストの Cookie から値を除く。
 local function filter_cookie(name, value)
-   -- TODO へたくそ。何か上手い方法は無いか？
-   local after = string.gsub(ngx.var.http_cookie, value, "")
+   -- BASE64 の + を \+ にしてから正規表現として ngx.re.sub に渡す。
+   local v, _, err = ngx.re.gsub(value, "\\+", "\\+")
+   if err then
+      return {message = "session filter preprocessing failed"}
+   end
+   local after, _, err = ngx.re.sub(ngx.var.http_cookie, name .. " *= *" .. v .. ";?", "", "i")
+   if err then
+      return {message = "session filtering failed"}
+   end
    ngx.req.set_header("Cookie", after)
 end
 
@@ -377,7 +384,10 @@ local function through(session)
    -- リクエスト元はセッション相手で間違いなかった。
    ngx.log(log_level, "authenticated request source is session client")
 
-   filter_cookie("X-Edo-Auth-Ta-Session", session.id)
+   local err = filter_cookie("X-Edo-Auth-Ta-Session", session.id)
+   if err then
+      return exit(err)
+   end
    ngx.req.set_header("X-Edo-Ta-Id", session.ta)
 
    local ok, err = redis_client:set_keepalive(redis_connection_keepalive, redis_connection_pool)
@@ -448,7 +458,10 @@ local function authenticate(session)
    -- セッションを認証済みに移行した。
    ngx.log(log_level, "session became authenticated")
 
-   filter_cookie("X-Edo-Auth-Ta-Session", session.id)
+   local err = filter_cookie("X-Edo-Auth-Ta-Session", session.id)
+   if err then
+      return exit(err)
+   end
    ngx.req.clear_header("X-Edo-Auth-Ta-Id")
    ngx.req.clear_header("X-Edo-Auth-Ta-Token-Sign")
    ngx.req.clear_header("X-Edo-Auth-Hash-Function")
