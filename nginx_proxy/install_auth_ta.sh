@@ -177,7 +177,7 @@ nginx_prefix=${nginx_prefix:=${nginx_dir}}
             make
             make install
 
-            cp ${auth_module_dir}/sample/nginx.auth_ta.conf ${nginx_dir}/conf/nginx.conf
+            sed 's/^\([ ]\+listen[ ]\+\)7000;$/\1'${nginx_port}';/' ${auth_module_dir}/sample/nginx.auth_ta.conf > ${nginx_dir}/conf/nginx.conf
         )
     fi
 )
