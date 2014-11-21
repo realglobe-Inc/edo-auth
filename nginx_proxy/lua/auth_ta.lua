@@ -449,8 +449,10 @@ local function authenticate(session)
    ngx.log(log_level, "session became authenticated")
 
    filter_cookie("X-Edo-Auth-Ta-Session", session.id)
+   ngx.req.clear_header("X-Edo-Auth-Ta-Id")
    ngx.req.clear_header("X-Edo-Auth-Ta-Token-Sign")
-   ngx.req.clear_header("X-Edo-Hash-Function")
+   ngx.req.clear_header("X-Edo-Auth-Hash-Function")
+   ngx.req.set_header("X-Edo-Ta-Id", ta_id)
 
    local ok, err = redis_client:set_keepalive(redis_connection_keepalive, redis_connection_pool)
    if not ok then
