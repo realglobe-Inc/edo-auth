@@ -8,7 +8,7 @@ TA 認証
 + [nginx_proxy/lua/auth_ta.lua](nginx_proxy/lua/auth_ta.lua): Lua による TA 認証用 nginx モジュール。
 + [nginx_proxy/install_auth_ta.sh](nginx_proxy/install_auth_ta.sh): TA 認証を組み込んだ nginx をセットアップするスクリプト。
 + [nginx_proxy/test_auth_ta.sh](nginx_proxy/test_auth_ta.sh): TA 認証を組み込んだ nginx の動作チェック用スクリプト。
-    + [nginx_proxy/sample/public_key/auth-ta-checker-no-id.pub.pem](nginx_proxy/sample/public_key/auth-ta-checker-no-id.pub.pem): 検証用公開鍵。
+    + [nginx_proxy/sample/public_key/auth-ta-checker-no-id.pub](nginx_proxy/sample/public_key/auth-ta-checker-no-id.pub): 検証用公開鍵。
     + [nginx_proxy/sample/private_key/auth-ta-checker-no-id.pem](nginx_proxy/sample/private_key/auth-ta-checker-no-id.pem): 署名用秘密鍵。
 + [nginx_proxy/sample/nginx.auth_ta.conf](nginx_proxy/sample/nginx.auth_ta.conf): TA 認証を組み込んだ nginx.conf の例。
   install_auth_ta.sh のデフォルト設定。
@@ -33,7 +33,7 @@ nginx_proxy/sample/nginx.auth_ta.conf を参照。
 
 #### TA 検証用公開鍵の取得
 現状、ローカルファイルか redis にキャッシュされている鍵のみ読める。
-ローカルファイルは、nginx.conf で $edo_auth_public_key_directory に設定したディレクトリ内に &lt;TA の ID&gt;.pub.pem のファイル名で置く。
+ローカルファイルは、nginx.conf で $edo_auth_public_key_directory に設定したディレクトリ内に &lt;TA の ID&gt;.pub のファイル名で置く。
 中身は PEM 形式。
 
 ローカルファイルをリモートと同期するような機能は無いので、必要ならば別口で行う。

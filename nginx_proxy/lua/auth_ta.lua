@@ -60,7 +60,7 @@ local redis_connection_keepalive = ngx.var.edo_auth_redis_connection_keepalive o
 -- $edo_auth_redis_connection_pool: 1 ワーカー当たりの redis ソケット確保数。
 -- 1 で十分かと思ったが、ab とかやってみるとそうではなさそう。
 local redis_connection_pool = ngx.var.edo_auth_redis_connection_pool or 16
--- $edo_auth_public_key_directory: 公開鍵が <TA の ID>.pub.pem って名前で入ってるディレクトリ。
+-- $edo_auth_public_key_directory: 公開鍵が <TA の ID>.pub って名前で入ってるディレクトリ。
 local public_key_directory = get_absolute_path(ngx.var.edo_auth_public_key_directory)
 -- $edo_auth_session_expires_in: セッションの有効期間。
 local session_expires_in = ngx.var.edo_auth_session_expires_in or 60 * 60 -- 1 時間。
@@ -343,7 +343,7 @@ local public_key_manager = {
 
       -- .pub または .crt から公開鍵を読んで、キャッシュする。
       local err
-      public_key_pem, err = read_pub(public_key_directory .. "/" .. ta_id .. ".pub.pem")
+      public_key_pem, err = read_pub(public_key_directory .. "/" .. ta_id .. ".pub")
       if err then
          -- 公開鍵ファイルに不具合。
          ngx.log(ngx.ERR, err)
