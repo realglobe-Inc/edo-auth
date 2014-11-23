@@ -299,6 +299,32 @@ EOF
     echo "----- OK: response in invalid sign -----"
 
 
+    # 公開鍵が証明書でも大丈夫か。
+    TA=test
+    ./lib/redis/bin/redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
+    SIGN=$(printf ${TOKEN} | openssl dgst -${HASH} -binary | openssl pkeyutl -sign -inkey sample/private_key/${TA}.key -pkeyopt digest:${HASH} | base64 | tr -d '\n')
+    TMP_FILE=/tmp/$(basename ${0%.*})$(date +"%y%m%d%H%M%S%N")
+    curl -v \
+        --cookie "X-Edo-Auth-Ta-Session"="${SESSION}" \
+        -H "X-Edo-Auth-Ta-Id: ${TA}" \
+        -H "X-Edo-Auth-Ta-Token-Sign: ${SIGN}" \
+        -H "X-Edo-Auth-Hash-Function: ${HASH}" \
+        http://localhost:${nginx_port}/ > ${TMP_FILE} 2>&1
+    if grep -q '^< X-Edo-Auth-Ta-Error:' ${TMP_FILE}; then
+        echo "Error (authenticating): "$(grep '^< X-Edo-Auth-Ta-Error:' ${TMP_FILE}) 1>&2
+        exit 1
+    elif ! grep -q '^< HTTP/[0-9.]\+ 200 OK' ${TMP_FILE}; then
+        echo "Error (authenticating): invalid status "$(grep '^< HTTP/[0-9.]\+ ' ${TMP_FILE}) 1>&2
+        exit 1
+    elif [ -n ""$(./lib/redis/bin/redis-cli -p ${redis_port} get "session:unauthenticated:${SESSION}") ]; then
+        echo "Error (authenticating): unauthentcated session remains" $(./lib/redis/bin/redis-cli -p ${redis_port} get "session:unauthenticated:${SESSION}") 1>&2
+        exit 1
+    fi
+    rm ${TMP_FILE}
+
+    echo "----- OK: response in public key in certification -----"
+
+
     # redis との接続が再利用されているか。
     if [ $(netstat -an | grep " 127.0.0.1:${redis_port} .* ESTABLISHED" | wc -l) != 2 ]; then
         echo "Error: not one redis socket" 1>&2
