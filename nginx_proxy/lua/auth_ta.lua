@@ -267,6 +267,66 @@ local session_manager = {
 }
 
 
+-- ファイルを読み込む。
+local read_file = function(path)
+   local fd, err = io.open(path)
+   if err then
+      -- ファイルが無かった？
+      return nil, err
+   end
+
+   -- ファイルがあった。
+   ngx.log(log_level, path .. " is exist")
+
+   local buff = fd:read("*a")
+   fd:close()
+   if (not buff) or buff == "" then
+      -- 空だった。
+      return nil, path .. " is empty"
+   end
+
+   return buff
+end
+
+-- PEM または DER 形式の公開鍵を読んで、PEM 形式で返す。
+local read_pub = function(path)
+   local buff, err = read_file(path)
+   if err then
+      return nil, err
+   end
+
+   -- 読めた。
+   local public_key, err = openssl.pkey.read(buff, true)
+   if err then
+      -- ファイルの中身がおかしかった。
+      return nil, err
+   end
+
+   return public_key:export()
+end
+
+-- PEM または DER 形式の証明書を読んで、公開鍵をPEM 形式で返す。
+local read_crt = function(path)
+   local buff, err = read_file(path)
+   if err then
+      return nil, err
+   end
+
+   -- 読めた。
+   local cert, err = openssl.x509.read(buff)
+   if err then
+      -- ファイルの中身がおかしかった。
+      return nil, err
+   end
+
+   local public_key, err = cert:get_public()
+   if err then
+      return nil, err
+   end
+
+   return public_key:export()
+end
+
 local public_key_manager = {
    -- 公開鍵を取得する。
    get = function(ta_id)
@@ -281,25 +341,28 @@ local public_key_manager = {
 
       -- redis になかった。
 
-      local public_key_path = public_key_directory .. "/" .. ta_id .. ".pub.pem"
-      local fd, err = io.open(public_key_path)
+      -- .pub または .crt から公開鍵を読んで、キャッシュする。
+      local err
+      public_key_pem, err = read_pub(public_key_directory .. "/" .. ta_id .. ".pub.pem")
       if err then
-         -- 公開鍵ファイルが無かった？
+         -- 公開鍵ファイルに不具合。
          ngx.log(ngx.ERR, err)
-         return nil
       end
 
-      -- 公開鍵ファイルがあった。
-      ngx.log(log_level, "public key file " .. ta_id .. ".pub.pem is exist")
-
-      public_key_pem = fd:read("*a")
-      fd:close()
-      if (not public_key_pem) or public_key_pem == "" then
-         return nil
+      if (not public_key_pem) or public_key_pem == ""  then
+         public_key_pem, err = read_crt(public_key_directory .. "/" .. ta_id .. ".crt")
+         if err then
+            -- 証明書ファイルに不具合。
+            ngx.log(ngx.ERR, err)
+            return nil
+         elseif (not public_key_pem) or public_key_pem == ""  then
+            -- 公開鍵が無かった。
+            return nil
+         end
       end
 
       -- 公開鍵が読めた。
-      ngx.log(log_level, "public key is exist in " .. ta_id .. ".pub.pem")
+      ngx.log(log_level, "public key of " .. ta_id .. " is exist")
 
       -- キャッシュする。
       local _, err = redis_client:setex("public_key:" .. ta_id, cache_expires_in, public_key_pem)
