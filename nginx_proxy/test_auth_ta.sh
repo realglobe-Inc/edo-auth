@@ -158,7 +158,7 @@ EOF
     SESSION="abcde"
     TOKEN="ABCDE"
     HASH="sha256"
-    SIGN=$(printf ${TOKEN} | openssl dgst -${HASH} -binary | openssl pkeyutl -sign -inkey sample/private_key/${TA}.pem -pkeyopt digest:${HASH} | base64 | tr -d '\n')
+    SIGN=$(printf ${TOKEN} | openssl dgst -${HASH} -binary | openssl pkeyutl -sign -inkey sample/private_key/${TA}.key -pkeyopt digest:${HASH} | base64 | tr -d '\n')
 
     ./lib/redis/bin/redis-cli -p ${redis_port} del "session:authenticated:${SESSION}" > /dev/null
     ./lib/redis/bin/redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
@@ -284,7 +284,7 @@ EOF
     curl -v \
         --cookie "X-Edo-Auth-Ta-Session"="${SESSION}" \
         -H "X-Edo-Auth-Ta-Id: ${TA}" \
-        -H "X-Edo-Auth-Ta-Token-Sign: "$(printf ${TOKEN}F | openssl dgst -${HASH} -binary | openssl pkeyutl -sign -inkey sample/private_key/${TA}.pem -pkeyopt digest:${HASH} | base64 | tr -d '\n') \
+        -H "X-Edo-Auth-Ta-Token-Sign: "$(printf ${TOKEN}F | openssl dgst -${HASH} -binary | openssl pkeyutl -sign -inkey sample/private_key/${TA}.key -pkeyopt digest:${HASH} | base64 | tr -d '\n') \
         -H "X-Edo-Auth-Hash-Function: ${HASH}" \
         http://localhost:${nginx_port}/ > ${TMP_FILE} 2>&1
     if ! grep -q '^< X-Edo-Auth-Ta-Error:' ${TMP_FILE}; then

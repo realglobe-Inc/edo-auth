@@ -9,7 +9,7 @@ TA 認証
 + [nginx_proxy/install_auth_ta.sh](nginx_proxy/install_auth_ta.sh): TA 認証を組み込んだ nginx をセットアップするスクリプト。
 + [nginx_proxy/test_auth_ta.sh](nginx_proxy/test_auth_ta.sh): TA 認証を組み込んだ nginx の動作チェック用スクリプト。
     + [nginx_proxy/sample/public_key/auth-ta-checker-no-id.pub](nginx_proxy/sample/public_key/auth-ta-checker-no-id.pub): 検証用公開鍵。
-    + [nginx_proxy/sample/private_key/auth-ta-checker-no-id.pem](nginx_proxy/sample/private_key/auth-ta-checker-no-id.pem): 署名用秘密鍵。
+    + [nginx_proxy/sample/private_key/auth-ta-checker-no-id.key](nginx_proxy/sample/private_key/auth-ta-checker-no-id.key): 署名用秘密鍵。
 + [nginx_proxy/sample/nginx.auth_ta.conf](nginx_proxy/sample/nginx.auth_ta.conf): TA 認証を組み込んだ nginx.conf の例。
   install_auth_ta.sh のデフォルト設定。
 
