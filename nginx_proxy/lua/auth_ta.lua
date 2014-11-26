@@ -49,7 +49,7 @@ local session_length = ngx.var.edo_auth_session_length or 40
 local token_length = ngx.var.edo_auth_token_length or 40
 -- $edo_auth_default_hash: 無指定時の署名検証に使われるハッシュ関数。
 local default_hash = ngx.var.edo_auth_default_hash or "sha256"
--- $edo_auth_start_delay: セッションの開始から認証完了までの猶予期間。
+-- $edo_auth_start_delay: セッションの開始から認証完了までの猶予期間 (秒)。
 local start_delay = ngx.var.edo_auth_start_delay or 3 * 60 -- 3 分。
 -- $edo_auth_redis_host: redis のアドレス。
 local redis_host = ngx.var.edo_auth_redis_host or "127.0.0.1"
@@ -62,9 +62,9 @@ local redis_connection_keepalive = ngx.var.edo_auth_redis_connection_keepalive o
 local redis_connection_pool = ngx.var.edo_auth_redis_connection_pool or 16
 -- $edo_auth_public_key_directory: 公開鍵が <TA の ID>.pub って名前で入ってるディレクトリ。
 local public_key_directory = get_absolute_path(ngx.var.edo_auth_public_key_directory)
--- $edo_auth_session_expires_in: セッションの有効期間。
+-- $edo_auth_session_expires_in: セッションの有効期間 (秒)。
 local session_expires_in = ngx.var.edo_auth_session_expires_in or 60 * 60 -- 1 時間。
--- $edo_auth_cache_expires_in: キャッシュの有効期間。
+-- $edo_auth_cache_expires_in: キャッシュの有効期間 (秒)。
 local cache_expires_in = ngx.var.edo_auth_cache_expires_in or 10 * 60 -- 10 分。
 -- $edo_auth_cookie_path: cookie の Path。複数 TA を混在させるならあった方が良いか？
 local cookie_path = ngx.var.edo_auth_cookie_path or "/"

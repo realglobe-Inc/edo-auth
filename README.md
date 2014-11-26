@@ -8,40 +8,15 @@ TA 認証
 + [nginx_proxy/lua/auth_ta.lua](nginx_proxy/lua/auth_ta.lua): Lua による TA 認証用 nginx モジュール。
 + [nginx_proxy/install_auth_ta.sh](nginx_proxy/install_auth_ta.sh): TA 認証を組み込んだ nginx をセットアップするスクリプト。
 + [nginx_proxy/test_auth_ta.sh](nginx_proxy/test_auth_ta.sh): TA 認証を組み込んだ nginx の動作チェック用スクリプト。
-    + [nginx_proxy/sample/public_keys/auth-ta-checker-no-id.pub](nginx_proxy/sample/public_keys/auth-ta-checker-no-id.pub): 検証用公開鍵。
-    + [nginx_proxy/sample/private_keys/auth-ta-checker-no-id.key](nginx_proxy/sample/private_keys/auth-ta-checker-no-id.key): 署名用秘密鍵。
+    + [nginx_proxy/sample/public_keys/auth-ta-checker-no-id.pub](nginx_proxy/sample/public_keys/auth-ta-checker-no-id.pub): 動作チェック用の検証用公開鍵。
+    + [nginx_proxy/sample/private_keys/auth-ta-checker-no-id.key](nginx_proxy/sample/private_keys/auth-ta-checker-no-id.key): 動作チェック用の署名用秘密鍵。
+    + [nginx_proxy/sample/public_keys/test.crt](nginx_proxy/sample/public_keys/test.crt): 動作チェック用の検証用公開鍵を含む証明書。
+    + [nginx_proxy/sample/private_keys/test.key](nginx_proxy/sample/private_keys/test.key): 動作チェック用の署名用秘密鍵。
+    + [nginx_proxy/sample/public_keys/empty.pub](nginx_proxy/sample/public_keys/empty.pub): 動作チェック用の空ファイル。
 + [nginx_proxy/sample/nginx.auth_ta.conf](nginx_proxy/sample/nginx.auth_ta.conf): TA 認証を組み込んだ nginx.conf の例。
   install_auth_ta.sh のデフォルト設定。
 
-
-### 設置
-nginx_proxy/install_auth_ta.sh を実行すると、nginx_proxy/lib 以下に必要なプログラムがインストールされ、実行される。
-
-
-### 設定
-nginx_proxy/sample/nginx.auth_ta.conf を参照。
-基本的に、nginx.conf の中で auth_ta.lua を読み込む前に、
-
-    set $edo_auth_<パラメータ名> <値>;
-
-の形で設定する。
-パラメータは nginx_proxy/lua/auth_ta.lua の前の方に列挙してある。
-
-### 動作
-仕様は [edo/doc/spec_edo_auth_ta.md](https://github.com/realglobe-Inc/edo/blob/development/doc/spec_edo_auth_ta.md) を参照。
-ただし、現状、TA 検証用公開鍵の取得はファイルからのみで、外部からは取得しない。
-
-#### TA 検証用公開鍵の取得
-現状、ローカルファイルか redis にキャッシュされている鍵のみ読める。
-ローカルファイルは、nginx.conf で $edo_auth_public_key_directory に設定したディレクトリ内に &lt;TA の ID&gt;.pub のファイル名で置く。
-中身は PEM 形式。
-
-ローカルファイルをリモートと同期するような機能は無いので、必要ならば別口で行う。
-例えば、
-
-    wget -N -r -l 1 -P /var/edo/ta/public_keys -nH --cut-dirs=3 --no-parent -R 'index.html?*' https://example.org/edo/ta/public_keys/
-
-のようなコマンドを cron で定期的に実行する。
+使い方は [edo/doc/usage_edo-auth-ta.md](https://github.com/realglobe-Inc/edo/blob/development/doc/usage_edo-auth-ta.md) 参照。
 
 
 アカウント認証
