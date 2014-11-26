@@ -49,7 +49,7 @@ local session_length = ngx.var.edo_auth_session_length or 40
 local token_length = ngx.var.edo_auth_token_length or 40
 -- $edo_auth_default_hash: 無指定時の署名検証に使われるハッシュ関数。
 local default_hash = ngx.var.edo_auth_default_hash or "sha256"
--- $edo_auth_start_delay: セッションの開始から認証完了までの猶予期間。
+-- $edo_auth_start_delay: セッションの開始から認証完了までの猶予期間 (秒)。
 local start_delay = ngx.var.edo_auth_start_delay or 3 * 60 -- 3 分。
 -- $edo_auth_redis_host: redis のアドレス。
 local redis_host = ngx.var.edo_auth_redis_host or "127.0.0.1"
@@ -60,11 +60,11 @@ local redis_connection_keepalive = ngx.var.edo_auth_redis_connection_keepalive o
 -- $edo_auth_redis_connection_pool: 1 ワーカー当たりの redis ソケット確保数。
 -- 1 で十分かと思ったが、ab とかやってみるとそうではなさそう。
 local redis_connection_pool = ngx.var.edo_auth_redis_connection_pool or 16
--- $edo_auth_public_key_directory: 公開鍵が <TA の ID>.pub.pem って名前で入ってるディレクトリ。
+-- $edo_auth_public_key_directory: 公開鍵が <TA の ID>.pub って名前で入ってるディレクトリ。
 local public_key_directory = get_absolute_path(ngx.var.edo_auth_public_key_directory)
--- $edo_auth_session_expires_in: セッションの有効期間。
+-- $edo_auth_session_expires_in: セッションの有効期間 (秒)。
 local session_expires_in = ngx.var.edo_auth_session_expires_in or 60 * 60 -- 1 時間。
--- $edo_auth_cache_expires_in: キャッシュの有効期間。
+-- $edo_auth_cache_expires_in: キャッシュの有効期間 (秒)。
 local cache_expires_in = ngx.var.edo_auth_cache_expires_in or 10 * 60 -- 10 分。
 -- $edo_auth_cookie_path: cookie の Path。複数 TA を混在させるならあった方が良いか？
 local cookie_path = ngx.var.edo_auth_cookie_path or "/"
@@ -103,7 +103,7 @@ end
 local function generate_random_string(length)
    -- OpenSSL の疑似乱数列を BASE64 エンコードする。
    local buff, err = openssl.random((length * 3  + 3) / 4, false)
-   if not err then -- よく分からないが、成功すると true ？
+   if err then
       return nil, {message = "openssl.random failed"}
    end
    local s = ngx.encode_base64(buff)
@@ -149,8 +149,15 @@ end
 
 -- リクエストの Cookie から値を除く。
 local function filter_cookie(name, value)
-   -- TODO へたくそ。何か上手い方法は無いか？
-   local after = string.gsub(ngx.var.http_cookie, value, "")
+   -- BASE64 の + を \+ にしてから正規表現として ngx.re.sub に渡す。
+   local v, _, err = ngx.re.gsub(value, "\\+", "\\+")
+   if err then
+      return {message = "session filter preprocessing failed"}
+   end
+   local after, _, err = ngx.re.sub(ngx.var.http_cookie, name .. " *= *" .. v .. ";?", "", "i")
+   if err then
+      return {message = "session filtering failed"}
+   end
    ngx.req.set_header("Cookie", after)
 end
 
@@ -162,7 +169,7 @@ local function verify(token, sign, public_key_pem, hash)
       return nil, {status = ngx.HTTP_FORBIDDEN, message = "bad sign format"}
    end
 
-   local public_key, err = openssl.pkey.read(public_key_pem, true)
+   local public_key, err = openssl.pkey.read(public_key_pem)
    if err then
       return nil, {status = ngx.HTTP_FORBIDDEN, message = err}
    end
@@ -260,6 +267,65 @@ local session_manager = {
 }
 
 
+-- ファイルを読み込む。
+local read_file = function(path)
+   local fd, err = io.open(path)
+   if err then
+      -- ファイルが無かった？
+      return nil, err
+   end
+
+   -- ファイルがあった。
+   ngx.log(log_level, path .. " is exist")
+
+   local buff = fd:read("*a")
+   fd:close()
+   if (not buff) or buff == "" then
+      -- 空だった。
+      return nil, path .. " is empty"
+   end
+
+   return buff
+end
+
+-- PEM または DER 形式の公開鍵を読んで、PEM 形式で返す。
+local read_pub = function(path)
+   local buff, err = read_file(path)
+   if err then
+      return nil, err
+   end
+
+   -- 読めた。
+   local public_key, err = openssl.pkey.read(buff)
+   if err then
+      -- ファイルの中身がおかしかった。
+      return nil, err
+   end
+   return public_key:export()
+end
+
+-- PEM または DER 形式の証明書を読んで、公開鍵をPEM 形式で返す。
+local read_crt = function(path)
+   local buff, err = read_file(path)
+   if err then
+      return nil, err
+   end
+
+   -- 読めた。
+   local cert, err = openssl.x509.read(buff)
+   if err then
+      -- ファイルの中身がおかしかった。
+      return nil, err
+   end
+
+   local public_key, err = cert:pubkey()
+   if err then
+      return nil, err
+   end
+
+   return public_key:export()
+end
+
 local public_key_manager = {
    -- 公開鍵を取得する。
    get = function(ta_id)
@@ -274,25 +340,28 @@ local public_key_manager = {
 
       -- redis になかった。
 
-      local public_key_path = public_key_directory .. "/" .. ta_id .. ".pub.pem"
-      local fd, err = io.open(public_key_path)
+      -- .pub または .crt から公開鍵を読んで、キャッシュする。
+      local err
+      public_key_pem, err = read_pub(public_key_directory .. "/" .. ta_id .. ".pub")
       if err then
-         -- 公開鍵ファイルが無かった？
+         -- 公開鍵ファイルに不具合。
          ngx.log(ngx.ERR, err)
-         return nil
       end
 
-      -- 公開鍵ファイルがあった。
-      ngx.log(log_level, "public key file " .. ta_id .. ".pub.pem is exist")
-
-      public_key_pem = fd:read("*a")
-      fd:close()
-      if (not public_key_pem) or public_key_pem == "" then
-         return nil
+      if (not public_key_pem) or public_key_pem == ""  then
+         public_key_pem, err = read_crt(public_key_directory .. "/" .. ta_id .. ".crt")
+         if err then
+            -- 証明書ファイルに不具合。
+            ngx.log(ngx.ERR, err)
+            return nil
+         elseif (not public_key_pem) or public_key_pem == ""  then
+            -- 公開鍵が無かった。
+            return nil
+         end
       end
 
       -- 公開鍵が読めた。
-      ngx.log(log_level, "public key is exist in " .. ta_id .. ".pub.pem")
+      ngx.log(log_level, "public key of " .. ta_id .. " is exist")
 
       -- キャッシュする。
       local _, err = redis_client:setex("public_key:" .. ta_id, cache_expires_in, public_key_pem)
@@ -377,7 +446,10 @@ local function through(session)
    -- リクエスト元はセッション相手で間違いなかった。
    ngx.log(log_level, "authenticated request source is session client")
 
-   filter_cookie("X-Edo-Auth-Ta-Session", session.id)
+   local err = filter_cookie("X-Edo-Auth-Ta-Session", session.id)
+   if err then
+      return exit(err)
+   end
    ngx.req.set_header("X-Edo-Ta-Id", session.ta)
 
    local ok, err = redis_client:set_keepalive(redis_connection_keepalive, redis_connection_pool)
@@ -448,9 +520,14 @@ local function authenticate(session)
    -- セッションを認証済みに移行した。
    ngx.log(log_level, "session became authenticated")
 
-   filter_cookie("X-Edo-Auth-Ta-Session", session.id)
+   local err = filter_cookie("X-Edo-Auth-Ta-Session", session.id)
+   if err then
+      return exit(err)
+   end
+   ngx.req.clear_header("X-Edo-Auth-Ta-Id")
    ngx.req.clear_header("X-Edo-Auth-Ta-Token-Sign")
-   ngx.req.clear_header("X-Edo-Hash-Function")
+   ngx.req.clear_header("X-Edo-Auth-Hash-Function")
+   ngx.req.set_header("X-Edo-Ta-Id", ta_id)
 
    local ok, err = redis_client:set_keepalive(redis_connection_keepalive, redis_connection_pool)
    if not ok then
