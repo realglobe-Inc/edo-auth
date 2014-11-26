@@ -2,16 +2,14 @@
 
 redis_ver=${redis_ver:=2.8.17}
 luajit_ver=${luajit_ver:=2.0.3}
-lua_redis_ver=${lua_redis_ver:=c49ba7c}
+lua_redis_ver=${lua_redis_ver:=688f932}
 lua_cjson_ver=${lua_cjson_ver:=2.1.0}
-openssl_ver=${openssl_ver:=1.0.1i}
-#lua_openssl_ver=${lua_openssl_ver:=3f4c8a9}
-lua_openssl_ver=${lua_openssl_ver:=1d5c3be}
+openssl_ver=${openssl_ver:=1.0.1j}
+lua_openssl_ver=${lua_openssl_ver:=3494b8a}
 headers_more_ver=${headers_more_ver:=v0.25}
 ngx_devel_kit_ver=${ngx_devel_kit_ver:=v0.2.19}
-lua_nginx_ver=${lua_nginx_ver:=v0.9.9}
-#nginx_ver=${nginx_ver:=1.7.6}
-nginx_ver=${nginx_ver:=1.7.4}
+lua_nginx_ver=${lua_nginx_ver:=v0.9.13}
+nginx_ver=${nginx_ver:=1.7.7}
 
 redis=${redis:=true}
 nginx=${nginx:=true}
@@ -110,11 +108,13 @@ nginx_dir=${nginx_dir:=${lib_dir}/nginx}
         (cd lua-openssl/
             git fetch
             git checkout ${lua_openssl_ver}
+            git submodule init
+            git submodule update
             make clean
             set +e # 最後の chcon が失敗するだけ。
-            make PREFIX=${lib_dir}/openssl CFLAGS="-I${src_dir}/LuaJIT-${luajit_ver}/src -DPTHREADS"
+            make PREFIX=${lib_dir}/openssl CFLAGS="-I${src_dir}/LuaJIT-${luajit_ver}/src -DPTHREADS -fPIC"
             set -e
-            make install PREFIX=${luajit_dir}
+            LUAV=5.1 make install PREFIX=${luajit_dir}
         )
     fi
 

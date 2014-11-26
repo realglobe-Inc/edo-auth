@@ -103,7 +103,7 @@ end
 local function generate_random_string(length)
    -- OpenSSL の疑似乱数列を BASE64 エンコードする。
    local buff, err = openssl.random((length * 3  + 3) / 4, false)
-   if not err then -- よく分からないが、成功すると true ？
+   if err then
       return nil, {message = "openssl.random failed"}
    end
    local s = ngx.encode_base64(buff)
@@ -169,7 +169,7 @@ local function verify(token, sign, public_key_pem, hash)
       return nil, {status = ngx.HTTP_FORBIDDEN, message = "bad sign format"}
    end
 
-   local public_key, err = openssl.pkey.read(public_key_pem, true)
+   local public_key, err = openssl.pkey.read(public_key_pem)
    if err then
       return nil, {status = ngx.HTTP_FORBIDDEN, message = err}
    end
@@ -296,12 +296,11 @@ local read_pub = function(path)
    end
 
    -- 読めた。
-   local public_key, err = openssl.pkey.read(buff, true)
+   local public_key, err = openssl.pkey.read(buff)
    if err then
       -- ファイルの中身がおかしかった。
       return nil, err
    end
-
    return public_key:export()
 end
 
@@ -319,7 +318,7 @@ local read_crt = function(path)
       return nil, err
    end
 
-   local public_key, err = cert:get_public()
+   local public_key, err = cert:pubkey()
    if err then
       return nil, err
    end
