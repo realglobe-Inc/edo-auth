@@ -2,7 +2,6 @@
 
 redis_port=${redis_port:=6379}
 nginx_port=${nginx_port:=7000}
-nginx_ver=${nginx_ver:=1.7.4}
 
 # デバッグ用。
 redis_num () {
@@ -28,7 +27,7 @@ EOF
     while true; do
         if ! nc -z localhost $nginx_port; then
             rm -rf /tmp/edo-auth-dest
-            cp -r lib/nginx_${nginx_ver} /tmp/edo-auth-dest
+            cp -r lib/nginx /tmp/edo-auth-dest
             cat <<EOF > /tmp/edo-auth-dest/conf/nginx.conf
 worker_processes  1;
 
@@ -76,7 +75,7 @@ EOF
     while true; do
         if ! nc -z localhost $nginx_port; then
             rm -rf /tmp/edo-auth
-            cp -r lib/nginx_${nginx_ver} /tmp/edo-auth
+            cp -r lib/nginx /tmp/edo-auth
             cat <<EOF > /tmp/edo-auth/conf/nginx.conf
 worker_processes  2;
 

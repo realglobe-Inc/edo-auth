@@ -28,7 +28,7 @@ mkdir -p ${lib_dir}
 
 redis_dir=${lib_dir}/redis
 luajit_dir=${lib_dir}/lua-jit
-nginx_dir=${nginx_dir:=${lib_dir}/nginx_${nginx_ver}
+nginx_dir=${nginx_dir:=${lib_dir}/nginx}
 
 (cd ${src_dir}
     # redis
