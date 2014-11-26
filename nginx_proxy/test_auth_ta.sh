@@ -104,7 +104,7 @@ http {
 
             set \$edo_module_dir $(pwd);
             set \$edo_auth_log_level error; # デバッグ。
-            set \$edo_auth_public_key_directory \$edo_module_dir/sample/public_key;
+            set \$edo_auth_public_key_directory \$edo_module_dir/sample/public_keys;
             access_by_lua_file \$edo_module_dir/lua/auth_ta.lua;
 
             proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -157,7 +157,7 @@ EOF
     SESSION="abcde"
     TOKEN="ABCDE"
     HASH="sha256"
-    SIGN=$(printf ${TOKEN} | openssl dgst -${HASH} -binary | openssl pkeyutl -sign -inkey sample/private_key/${TA}.key -pkeyopt digest:${HASH} | base64 | tr -d '\n')
+    SIGN=$(printf ${TOKEN} | openssl dgst -${HASH} -binary | openssl pkeyutl -sign -inkey sample/private_keys/${TA}.key -pkeyopt digest:${HASH} | base64 | tr -d '\n')
 
     ./lib/redis/bin/redis-cli -p ${redis_port} del "session:authenticated:${SESSION}" > /dev/null
     ./lib/redis/bin/redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
@@ -283,7 +283,7 @@ EOF
     curl -v \
         --cookie "X-Edo-Auth-Ta-Session"="${SESSION}" \
         -H "X-Edo-Auth-Ta-Id: ${TA}" \
-        -H "X-Edo-Auth-Ta-Token-Sign: "$(printf ${TOKEN}F | openssl dgst -${HASH} -binary | openssl pkeyutl -sign -inkey sample/private_key/${TA}.key -pkeyopt digest:${HASH} | base64 | tr -d '\n') \
+        -H "X-Edo-Auth-Ta-Token-Sign: "$(printf ${TOKEN}F | openssl dgst -${HASH} -binary | openssl pkeyutl -sign -inkey sample/private_keys/${TA}.key -pkeyopt digest:${HASH} | base64 | tr -d '\n') \
         -H "X-Edo-Auth-Hash-Function: ${HASH}" \
         http://localhost:${nginx_port}/ > ${TMP_FILE} 2>&1
     if ! grep -q '^< X-Edo-Auth-Ta-Error:' ${TMP_FILE}; then
@@ -301,7 +301,7 @@ EOF
     # 公開鍵が証明書でも大丈夫か。
     TA=test
     ./lib/redis/bin/redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
-    SIGN=$(printf ${TOKEN} | openssl dgst -${HASH} -binary | openssl pkeyutl -sign -inkey sample/private_key/${TA}.key -pkeyopt digest:${HASH} | base64 | tr -d '\n')
+    SIGN=$(printf ${TOKEN} | openssl dgst -${HASH} -binary | openssl pkeyutl -sign -inkey sample/private_keys/${TA}.key -pkeyopt digest:${HASH} | base64 | tr -d '\n')
     TMP_FILE=/tmp/$(basename ${0%.*})$(date +"%y%m%d%H%M%S%N")
     curl -v \
         --cookie "X-Edo-Auth-Ta-Session"="${SESSION}" \

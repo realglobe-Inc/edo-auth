@@ -8,8 +8,8 @@ TA 認証
 + [nginx_proxy/lua/auth_ta.lua](nginx_proxy/lua/auth_ta.lua): Lua による TA 認証用 nginx モジュール。
 + [nginx_proxy/install_auth_ta.sh](nginx_proxy/install_auth_ta.sh): TA 認証を組み込んだ nginx をセットアップするスクリプト。
 + [nginx_proxy/test_auth_ta.sh](nginx_proxy/test_auth_ta.sh): TA 認証を組み込んだ nginx の動作チェック用スクリプト。
-    + [nginx_proxy/sample/public_key/auth-ta-checker-no-id.pub](nginx_proxy/sample/public_key/auth-ta-checker-no-id.pub): 検証用公開鍵。
-    + [nginx_proxy/sample/private_key/auth-ta-checker-no-id.key](nginx_proxy/sample/private_key/auth-ta-checker-no-id.key): 署名用秘密鍵。
+    + [nginx_proxy/sample/public_keys/auth-ta-checker-no-id.pub](nginx_proxy/sample/public_keys/auth-ta-checker-no-id.pub): 検証用公開鍵。
+    + [nginx_proxy/sample/private_keys/auth-ta-checker-no-id.key](nginx_proxy/sample/private_keys/auth-ta-checker-no-id.key): 署名用秘密鍵。
 + [nginx_proxy/sample/nginx.auth_ta.conf](nginx_proxy/sample/nginx.auth_ta.conf): TA 認証を組み込んだ nginx.conf の例。
   install_auth_ta.sh のデフォルト設定。
 
@@ -39,7 +39,7 @@ nginx_proxy/sample/nginx.auth_ta.conf を参照。
 ローカルファイルをリモートと同期するような機能は無いので、必要ならば別口で行う。
 例えば、
 
-    wget -N -r -l 1 -P /var/edo/ta/public_key -nH --cut-dirs=3 --no-parent -R 'index.html?*' https://example.org/edo/ta/public_key/
+    wget -N -r -l 1 -P /var/edo/ta/public_keys -nH --cut-dirs=3 --no-parent -R 'index.html?*' https://example.org/edo/ta/public_keys/
 
 のようなコマンドを cron で定期的に実行する。
 
