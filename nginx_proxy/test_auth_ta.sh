@@ -332,6 +332,35 @@ EOF
     echo "----- OK: public key in certification -----"
 
 
+    # 公開鍵のファイル名が URL クエリ用にエスケープされていても大丈夫か。
+    TA="https://example.com"
+    TA_ESCAPED="https%3A%2F%2Fexample.com"
+    ./lib/redis/bin/redis-cli -p ${redis_port} del "public_key:${TA}" > /dev/null
+    ./lib/redis/bin/redis-cli -p ${redis_port} del "session:authenticated:${SESSION}" > /dev/null
+    ./lib/redis/bin/redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
+    SIGN=$(printf ${TOKEN} | openssl dgst -${HASH} -binary | openssl pkeyutl -sign -inkey sample/private_keys/${TA_ESCAPED}.key -pkeyopt digest:${HASH} | base64 | tr -d '\n')
+    TMP_FILE=/tmp/$(basename ${0%.*})$(date +"%y%m%d%H%M%S%N")
+    curl -v \
+        --cookie "X-Edo-Auth-Ta-Session"="${SESSION}" \
+        -H "X-Edo-Auth-Ta-Id: ${TA}" \
+        -H "X-Edo-Auth-Ta-Token-Sign: ${SIGN}" \
+        -H "X-Edo-Auth-Hash-Function: ${HASH}" \
+        http://localhost:${nginx_port}/ > ${TMP_FILE} 2>&1
+    if grep -q '^< X-Edo-Auth-Ta-Error:' ${TMP_FILE}; then
+        echo "Error (url query escaped public key file): "$(grep '^< X-Edo-Auth-Ta-Error:' ${TMP_FILE}) 1>&2
+        exit 1
+    elif ! grep -q '^< HTTP/[0-9.]\+ 200 OK' ${TMP_FILE}; then
+        echo "Error (url query escaped public key file): invalid status "$(grep '^< HTTP/[0-9.]\+ ' ${TMP_FILE}) 1>&2
+        exit 1
+    elif [ -n ""$(./lib/redis/bin/redis-cli -p ${redis_port} get "session:unauthenticated:${SESSION}") ]; then
+        echo "Error (url query escaped public key file): unauthentcated session remains" $(./lib/redis/bin/redis-cli -p ${redis_port} get "session:unauthenticated:${SESSION}") 1>&2
+        exit 1
+    fi
+    rm ${TMP_FILE}
+
+    echo "----- OK: url query escaped public key file -----"
+
+
     # redis との接続が再利用されているか。
     if [ $(netstat -an | grep " 127.0.0.1:${redis_port} .* ESTABLISHED" | wc -l) != 2 ]; then
         echo "Error: not one redis socket" 1>&2
