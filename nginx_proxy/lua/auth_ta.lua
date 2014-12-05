@@ -341,15 +341,15 @@ local public_key_manager = {
       -- redis になかった。
 
       -- .pub または .crt から公開鍵を読んで、キャッシュする。
-      local err
-      public_key_pem, err = read_pub(public_key_directory .. "/" .. ta_id .. ".pub")
+      local file_name_base = ngx.escape_uri(ta_id)
+      local public_key_pem, err = read_pub(public_key_directory .. "/" .. file_name_base .. ".pub")
       if err then
          -- 公開鍵ファイルに不具合。
          ngx.log(ngx.ERR, err)
       end
 
       if (not public_key_pem) or public_key_pem == ""  then
-         public_key_pem, err = read_crt(public_key_directory .. "/" .. ta_id .. ".crt")
+         public_key_pem, err = read_crt(public_key_directory .. "/" .. file_name_base .. ".crt")
          if err then
             -- 証明書ファイルに不具合。
             ngx.log(ngx.ERR, err)

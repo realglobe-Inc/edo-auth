@@ -149,7 +149,7 @@ EOF
     fi
     rm ${TMP_FILE}
 
-    echo "----- OK: response to unauthenticated request -----"
+    echo "----- OK: unauthenticated -----"
 
 
     # 認証中。
@@ -159,6 +159,7 @@ EOF
     HASH="sha256"
     SIGN=$(printf ${TOKEN} | openssl dgst -${HASH} -binary | openssl pkeyutl -sign -inkey sample/private_keys/${TA}.key -pkeyopt digest:${HASH} | base64 | tr -d '\n')
 
+    ./lib/redis/bin/redis-cli -p ${redis_port} del "public_key:${TA}" > /dev/null
     ./lib/redis/bin/redis-cli -p ${redis_port} del "session:authenticated:${SESSION}" > /dev/null
     ./lib/redis/bin/redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
     TMP_FILE=/tmp/$(basename ${0%.*})$(date +"%y%m%d%H%M%S%N")
@@ -180,8 +181,7 @@ EOF
     fi
     rm ${TMP_FILE}
 
-    ./lib/redis/bin/redis-cli -p ${redis_port} del "session:authenticated:${SESSION}" > /dev/null
-    echo "----- OK: response to authenticating request -----"
+    echo "----- OK: authenticating -----"
 
 
     # 認証済み。
@@ -199,7 +199,7 @@ EOF
     rm ${TMP_FILE}
 
     ./lib/redis/bin/redis-cli -p ${redis_port} del "session:authenticated:${SESSION}" > /dev/null
-    echo "----- OK: response to authenticated request -----"
+    echo "----- OK: authenticated -----"
 
 
     # セッション相手のアドレスが違っていたら 403 Forbidden を返すか。
@@ -217,10 +217,11 @@ EOF
     rm ${TMP_FILE}
 
     ./lib/redis/bin/redis-cli -p ${redis_port} del "session:authenticated:${SESSION}" > /dev/null
-    echo "----- OK: response to different source -----"
+    echo "----- OK: different source -----"
 
 
     # 認証情報が揃っていなかったら 403 Forbidden を返すか。
+    ./lib/redis/bin/redis-cli -p ${redis_port} del "session:authenticated:${SESSION}" > /dev/null
     ./lib/redis/bin/redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
     TMP_FILE=/tmp/$(basename ${0%.*})$(date +"%y%m%d%H%M%S%N")
     curl -v \
@@ -237,6 +238,9 @@ EOF
     fi
     rm ${TMP_FILE}
 
+    echo "----- OK: no X-Edo-Auth-Ta-Id -----"
+
+    ./lib/redis/bin/redis-cli -p ${redis_port} del "session:authenticated:${SESSION}" > /dev/null
     ./lib/redis/bin/redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
     TMP_FILE=/tmp/$(basename ${0%.*})$(date +"%y%m%d%H%M%S%N")
     curl -v \
@@ -253,10 +257,11 @@ EOF
     fi
     rm ${TMP_FILE}
 
-    echo "----- OK: response in lack of information -----"
+    echo "----- OK: no X-Edo-Auth-Ta-Token-Sign -----"
 
 
     # 公開鍵が無かったら 403 Forbidden を返すか。
+    ./lib/redis/bin/redis-cli -p ${redis_port} del "session:authenticated:${SESSION}" > /dev/null
     ./lib/redis/bin/redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
     TMP_FILE=/tmp/$(basename ${0%.*})$(date +"%y%m%d%H%M%S%N")
     curl -v \
@@ -274,10 +279,11 @@ EOF
     fi
     rm ${TMP_FILE}
 
-    echo "----- OK: response in no public key -----"
+    echo "----- OK: no public key -----"
 
 
     # 署名がおかしかったら 403 Forbidden を返すか。
+    ./lib/redis/bin/redis-cli -p ${redis_port} del "session:authenticated:${SESSION}" > /dev/null
     ./lib/redis/bin/redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
     TMP_FILE=/tmp/$(basename ${0%.*})$(date +"%y%m%d%H%M%S%N")
     curl -v \
@@ -295,11 +301,13 @@ EOF
     fi
     rm ${TMP_FILE}
 
-    echo "----- OK: response in invalid sign -----"
+    echo "----- OK: invalid sign -----"
 
 
     # 公開鍵が証明書でも大丈夫か。
-    TA=test
+    TA="test"
+    ./lib/redis/bin/redis-cli -p ${redis_port} del "public_key:${TA}" > /dev/null
+    ./lib/redis/bin/redis-cli -p ${redis_port} del "session:authenticated:${SESSION}" > /dev/null
     ./lib/redis/bin/redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
     SIGN=$(printf ${TOKEN} | openssl dgst -${HASH} -binary | openssl pkeyutl -sign -inkey sample/private_keys/${TA}.key -pkeyopt digest:${HASH} | base64 | tr -d '\n')
     TMP_FILE=/tmp/$(basename ${0%.*})$(date +"%y%m%d%H%M%S%N")
@@ -310,18 +318,47 @@ EOF
         -H "X-Edo-Auth-Hash-Function: ${HASH}" \
         http://localhost:${nginx_port}/ > ${TMP_FILE} 2>&1
     if grep -q '^< X-Edo-Auth-Ta-Error:' ${TMP_FILE}; then
-        echo "Error (authenticating): "$(grep '^< X-Edo-Auth-Ta-Error:' ${TMP_FILE}) 1>&2
+        echo "Error (public key in certification): "$(grep '^< X-Edo-Auth-Ta-Error:' ${TMP_FILE}) 1>&2
         exit 1
     elif ! grep -q '^< HTTP/[0-9.]\+ 200 OK' ${TMP_FILE}; then
-        echo "Error (authenticating): invalid status "$(grep '^< HTTP/[0-9.]\+ ' ${TMP_FILE}) 1>&2
+        echo "Error (public key in certification): invalid status "$(grep '^< HTTP/[0-9.]\+ ' ${TMP_FILE}) 1>&2
         exit 1
     elif [ -n ""$(./lib/redis/bin/redis-cli -p ${redis_port} get "session:unauthenticated:${SESSION}") ]; then
-        echo "Error (authenticating): unauthentcated session remains" $(./lib/redis/bin/redis-cli -p ${redis_port} get "session:unauthenticated:${SESSION}") 1>&2
+        echo "Error (public key in certification): unauthentcated session remains" $(./lib/redis/bin/redis-cli -p ${redis_port} get "session:unauthenticated:${SESSION}") 1>&2
         exit 1
     fi
     rm ${TMP_FILE}
 
-    echo "----- OK: response in public key in certification -----"
+    echo "----- OK: public key in certification -----"
+
+
+    # 公開鍵のファイル名が URL クエリ用にエスケープされていても大丈夫か。
+    TA="https://example.com"
+    TA_ESCAPED="https%3A%2F%2Fexample.com"
+    ./lib/redis/bin/redis-cli -p ${redis_port} del "public_key:${TA}" > /dev/null
+    ./lib/redis/bin/redis-cli -p ${redis_port} del "session:authenticated:${SESSION}" > /dev/null
+    ./lib/redis/bin/redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
+    SIGN=$(printf ${TOKEN} | openssl dgst -${HASH} -binary | openssl pkeyutl -sign -inkey sample/private_keys/${TA_ESCAPED}.key -pkeyopt digest:${HASH} | base64 | tr -d '\n')
+    TMP_FILE=/tmp/$(basename ${0%.*})$(date +"%y%m%d%H%M%S%N")
+    curl -v \
+        --cookie "X-Edo-Auth-Ta-Session"="${SESSION}" \
+        -H "X-Edo-Auth-Ta-Id: ${TA}" \
+        -H "X-Edo-Auth-Ta-Token-Sign: ${SIGN}" \
+        -H "X-Edo-Auth-Hash-Function: ${HASH}" \
+        http://localhost:${nginx_port}/ > ${TMP_FILE} 2>&1
+    if grep -q '^< X-Edo-Auth-Ta-Error:' ${TMP_FILE}; then
+        echo "Error (url query escaped public key file): "$(grep '^< X-Edo-Auth-Ta-Error:' ${TMP_FILE}) 1>&2
+        exit 1
+    elif ! grep -q '^< HTTP/[0-9.]\+ 200 OK' ${TMP_FILE}; then
+        echo "Error (url query escaped public key file): invalid status "$(grep '^< HTTP/[0-9.]\+ ' ${TMP_FILE}) 1>&2
+        exit 1
+    elif [ -n ""$(./lib/redis/bin/redis-cli -p ${redis_port} get "session:unauthenticated:${SESSION}") ]; then
+        echo "Error (url query escaped public key file): unauthentcated session remains" $(./lib/redis/bin/redis-cli -p ${redis_port} get "session:unauthenticated:${SESSION}") 1>&2
+        exit 1
+    fi
+    rm ${TMP_FILE}
+
+    echo "----- OK: url query escaped public key file -----"
 
 
     # redis との接続が再利用されているか。

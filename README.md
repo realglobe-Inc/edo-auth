@@ -10,6 +10,8 @@ TA 認証
 + [nginx_proxy/test_auth_ta.sh](nginx_proxy/test_auth_ta.sh): TA 認証を組み込んだ nginx の動作チェック用スクリプト。
     + [nginx_proxy/sample/public_keys/auth-ta-checker-no-id.pub](nginx_proxy/sample/public_keys/auth-ta-checker-no-id.pub): 動作チェック用の検証用公開鍵。
     + [nginx_proxy/sample/private_keys/auth-ta-checker-no-id.key](nginx_proxy/sample/private_keys/auth-ta-checker-no-id.key): 動作チェック用の署名用秘密鍵。
+    + [nginx_proxy/sample/public_keys/https%3A%2F%2Fexample.com.pub](nginx_proxy/sample/public_keys/https%3A%2F%2Fexample.com.pub): 動作チェック用の検証用公開鍵。
+    + [nginx_proxy/sample/private_keys/https%3A%2F%2Fexample.com.key](nginx_proxy/sample/private_keys/https%3A%2F%2Fexample.com.key): 動作チェック用の署名用秘密鍵。
     + [nginx_proxy/sample/public_keys/test.crt](nginx_proxy/sample/public_keys/test.crt): 動作チェック用の検証用公開鍵を含む証明書。
     + [nginx_proxy/sample/private_keys/test.key](nginx_proxy/sample/private_keys/test.key): 動作チェック用の署名用秘密鍵。
     + [nginx_proxy/sample/public_keys/empty.pub](nginx_proxy/sample/public_keys/empty.pub): 動作チェック用の空ファイル。
