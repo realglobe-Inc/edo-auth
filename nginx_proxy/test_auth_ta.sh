@@ -159,6 +159,7 @@ EOF
     HASH="sha256"
     SIGN=$(printf ${TOKEN} | openssl dgst -${HASH} -binary | openssl pkeyutl -sign -inkey sample/private_keys/${TA}.key -pkeyopt digest:${HASH} | base64 | tr -d '\n')
 
+    ./lib/redis/bin/redis-cli -p ${redis_port} del "public_key:${TA}" > /dev/null
     ./lib/redis/bin/redis-cli -p ${redis_port} del "session:authenticated:${SESSION}" > /dev/null
     ./lib/redis/bin/redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
     TMP_FILE=/tmp/$(basename ${0%.*})$(date +"%y%m%d%H%M%S%N")
@@ -180,7 +181,6 @@ EOF
     fi
     rm ${TMP_FILE}
 
-    ./lib/redis/bin/redis-cli -p ${redis_port} del "session:authenticated:${SESSION}" > /dev/null
     echo "----- OK: authenticating -----"
 
 
@@ -221,6 +221,7 @@ EOF
 
 
     # 認証情報が揃っていなかったら 403 Forbidden を返すか。
+    ./lib/redis/bin/redis-cli -p ${redis_port} del "session:authenticated:${SESSION}" > /dev/null
     ./lib/redis/bin/redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
     TMP_FILE=/tmp/$(basename ${0%.*})$(date +"%y%m%d%H%M%S%N")
     curl -v \
@@ -239,6 +240,7 @@ EOF
 
     echo "----- OK: no X-Edo-Auth-Ta-Id -----"
 
+    ./lib/redis/bin/redis-cli -p ${redis_port} del "session:authenticated:${SESSION}" > /dev/null
     ./lib/redis/bin/redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
     TMP_FILE=/tmp/$(basename ${0%.*})$(date +"%y%m%d%H%M%S%N")
     curl -v \
@@ -259,6 +261,7 @@ EOF
 
 
     # 公開鍵が無かったら 403 Forbidden を返すか。
+    ./lib/redis/bin/redis-cli -p ${redis_port} del "session:authenticated:${SESSION}" > /dev/null
     ./lib/redis/bin/redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
     TMP_FILE=/tmp/$(basename ${0%.*})$(date +"%y%m%d%H%M%S%N")
     curl -v \
@@ -280,6 +283,7 @@ EOF
 
 
     # 署名がおかしかったら 403 Forbidden を返すか。
+    ./lib/redis/bin/redis-cli -p ${redis_port} del "session:authenticated:${SESSION}" > /dev/null
     ./lib/redis/bin/redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
     TMP_FILE=/tmp/$(basename ${0%.*})$(date +"%y%m%d%H%M%S%N")
     curl -v \
@@ -301,7 +305,9 @@ EOF
 
 
     # 公開鍵が証明書でも大丈夫か。
-    TA=test
+    TA="test"
+    ./lib/redis/bin/redis-cli -p ${redis_port} del "public_key:${TA}" > /dev/null
+    ./lib/redis/bin/redis-cli -p ${redis_port} del "session:authenticated:${SESSION}" > /dev/null
     ./lib/redis/bin/redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
     SIGN=$(printf ${TOKEN} | openssl dgst -${HASH} -binary | openssl pkeyutl -sign -inkey sample/private_keys/${TA}.key -pkeyopt digest:${HASH} | base64 | tr -d '\n')
     TMP_FILE=/tmp/$(basename ${0%.*})$(date +"%y%m%d%H%M%S%N")
