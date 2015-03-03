@@ -1,111 +1,160 @@
-edo-auth
-=======
+# edo-auth
+
+現状は、TA 内にて、アクセスしてきた他の TA の認証を行う nginx のモジュール。
+
+以下、例における /opt/edo-auth はインストールパスとする。
+異なる場合は適宜置き換えること。
 
 
-TA 認証
----
+## 1. インストール
 
-+ [nginx_proxy/lua/auth_ta.lua](nginx_proxy/lua/auth_ta.lua): Lua による TA 認証用 nginx モジュール。
-+ [nginx_proxy/install_auth_ta.sh](nginx_proxy/install_auth_ta.sh): TA 認証を組み込んだ nginx をセットアップするスクリプト。
-+ [nginx_proxy/test_auth_ta.sh](nginx_proxy/test_auth_ta.sh): TA 認証を組み込んだ nginx の動作チェック用スクリプト。
-    + [nginx_proxy/sample/public_keys/auth-ta-checker-no-id.pub](nginx_proxy/sample/public_keys/auth-ta-checker-no-id.pub): 動作チェック用の検証用公開鍵。
-    + [nginx_proxy/sample/private_keys/auth-ta-checker-no-id.key](nginx_proxy/sample/private_keys/auth-ta-checker-no-id.key): 動作チェック用の署名用秘密鍵。
-    + [nginx_proxy/sample/public_keys/https%3A%2F%2Fexample.com.pub](nginx_proxy/sample/public_keys/https%3A%2F%2Fexample.com.pub): 動作チェック用の検証用公開鍵。
-    + [nginx_proxy/sample/private_keys/https%3A%2F%2Fexample.com.key](nginx_proxy/sample/private_keys/https%3A%2F%2Fexample.com.key): 動作チェック用の署名用秘密鍵。
-    + [nginx_proxy/sample/public_keys/test.crt](nginx_proxy/sample/public_keys/test.crt): 動作チェック用の検証用公開鍵を含む証明書。
-    + [nginx_proxy/sample/private_keys/test.key](nginx_proxy/sample/private_keys/test.key): 動作チェック用の署名用秘密鍵。
-    + [nginx_proxy/sample/public_keys/empty.pub](nginx_proxy/sample/public_keys/empty.pub): 動作チェック用の空ファイル。
-+ [nginx_proxy/sample/nginx.auth_ta.conf](nginx_proxy/sample/nginx.auth_ta.conf): TA 認証を組み込んだ nginx.conf の例。
-  install_auth_ta.sh のデフォルト設定。
+install.sh で nginx ごとセットアップできる。
 
-使い方は [edo/doc/usage_edo-auth-ta.md](https://github.com/realglobe-Inc/edo/blob/development/doc/usage_edo-auth-ta.md) 参照。
-
-
-アカウント認証
----
-未定
-
-
----
-
-
-add_header.lua, decrypt.lua, login.lua, callback.lua 等
----
-仕様模索段階でのプロトタイプ。
-
-### 設置方法
-
-nginx_proxy/install.sh を参照。  
-その後、nginx_proxy/lua/lib/config.lua と nginx.conf を適切に設定し nginx を起動する。  
-
-### テスト
-
-nginx_proxy/test.sh を参照。  
-
-### SSO(OAuth2)モジュール
-
-まずアプリをOAuthクライアントとして登録し、クライアントIDやシークレットトークンを取得しておく。  
-nginx の起動時に、nginx.conf で以下の項目を適切に設定する。  
-
-* 認証サーバーのURL、クライアントとして登録してあるリダイレクトURL、クライアントID、シークレットトークンなど  
-* ログインURL(login.lua にルーティング)、リダイレクトURL(callback.lua にルーティング)  
-* OAuthサーバーのアクセストークンエンドポイント  
-* redis のURL or unixソケット  
-* バックエンドのアプリにプロキシする前に、add_header.lua を通す  
-
-login.lua が実行されると認証サーバーにリダイレクトされ、認証されると callback.lua にリダイレクトされる。  
-callback.lua ではアクセストークンを取得し、redis に保存する。アクセストークンが正常に取得できれば cookie: oauth_session_key が設定され、ログイン状態になる。  
-ログイン状態なら X-OAUTH-ACCESS-TOKEN ヘッダにアクセストークンが設定されるので、必要に応じてアプリから使用する。  
-
-### RSA認証モジュール
-
-メッセージの送信者は、以下の二通りのうちどちらかの方法でリクエストヘッダを付与する。  
-
-#### 生のトークンを署名する場合
-
-* X-EDO-Private-Key-UUID
-  * 送信者が暗号化に使用した秘密鍵のUUID。送信者のUUIDとは異なる場合もある
-* X-EDO-Auth-Encoded-Token
-  * "送信者のUUID,受信者のUUID,UNIXタイムスタンプ"を「base64エンコード+改行を削除」したもの
-* X-EDO-Auth-Params
-  * オプション。任意のJSONを「base64エンコード+改行を削除」したもの
-
-```sh
-$ sender_uuid=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-$ receiver_uuid=yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy
-$ private_key_uuid=zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz
-$ timestamp=`date +%s`
-$ encoded_token=`printf ${sender_uuid},${receiver_uuid},${timestamp} | openssl rsautl -sign -inkey /path/to/private.key | openssl base64 | tr -d '\n'`
-
-$ curl https://edo-service.com/ -H "X-EDO-Private-Key-UUID: ${private_key_uuid}" -H "X-EDO-Auth-Encoded-Token: ${encoded_token}" -H "X-EDO-Auth-Params: ..."
+```shell
+./install.sh
 ```
 
-#### ハッシュ値を署名する場合
+インストール先を変える場合は install_dir で指定する。
 
-* X-EDO-Private-Key-UUID
-  * 送信者が署名に使用した秘密鍵のUUID。送信者のUUIDとは異なる場合もある
-* X-EDO-Auth-Token
-  * "送信者のUUID,受信者のUUID,タイムスタンプ"
-* X-EDO-Auth-Signed-Token
-  * 送信者が作成した署名を「base64エンコード+改行を削除」したもの
-* X-EDO-Hash-Function
-  * 送信者が署名に使用したハッシュ関数。md5、sha1、sha256、など
-* X-EDO-Auth-Params
-  * オプション。任意のJSONを「base64エンコード+改行を削除」したもの
-
-```sh
-$ sender_uuid=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-$ receiver_uuid=yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy
-$ private_key_uuid=zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz
-$ timestamp=`date +%s`
-$ auth_token=${sender_uuid},${receiver_uuid},${timestamp}
-$ signed_token=`printf ${auth_token} | openssl dgst -sign /path/to/private.key -sha256 | openssl base64 | tr -d '\n'`
-
-$ curl https://edo-service.com/ -H "X-EDO-Private-Key-UUID: ${private_key_uuid}" -H "X-EDO-Auth-Token: ${auth_token}" -H "X-EDO-Auth-Signed-Token: ${signed_token}" -H "X-EDO-Hash-Function: sha256" -H "X-EDO-Auth-Params: ..."
+```shell
+install_dir=/opt/edo-auth ./install.sh
 ```
 
 
-proxy.lua 等
----
-location を分けずに動かすのを前提とした試作。
-独自のアカウント認証に対応する。
+### 1.1. インストールオプション
+
+|シェル変数|初期値|値|
+|:--|:--|:--|
+|install_dir|install.sh のあるディレクトリ|インストール先のパス|
+|nginx_port|7000|nginx のポート番号|
+|nginx|true|インストール終了時に nginx を起動するかどうか|
+|proxy_pass|http://example.org|edo-auth を通した後に転送する先|
+
+
+### 1.2. 既存の nginx で使う
+
+必要なモジュールと共に nginx がコンパイルされているなら、nginx の設定ファイルの適切な箇所に以下のような設定を追加する。
+
+```nginx
+set $edo_auth_dir /opt/edo-auth;
+set $edo_auth_public_key_directory $edo_auth_dir/public_keys;
+access_by_lua_file $edo_auth_dir/lua/auth_ta.lua;
+```
+
+## 2. 実行
+
+
+### 2.1. DB の準備
+
+動作には [redis](http://redis.io/) が必要となる。
+インストールされていない場合はインストールする。
+
+
+### 2.2. 公開鍵ファイルの設置
+
+許可する TA の公開鍵を、&lt;TA の ID&gt;.pub という名前で公開鍵ディレクトリに置く。
+
+```
+<公開鍵ディレクトリ>/
+├── <TA 1 の ID>.pub
+├── <TA 2 の ID>.pub
+...
+```
+
+公開鍵ディレクトリのパスは設定ファイルで指定する。
+
+
+### 2.3. 起動
+
+install.sh でインストールした場合はデーモンとして起動している。
+起動させていない場合、一旦終了させた場合は、
+
+```shell
+/opt/edo-auth/nginx/sbin/nginx
+```
+
+
+### 2.4. 設定
+
+設定は nginx の設定ファイルの中で auth\_ta.lua を読む前に書く。
+
+|項目名|初期値|値|
+|:--|:--|:--|
+|$edo\_auth\_log\_level|debug|edo-auth のログを nginx のどのログレベルで出力するか|
+|$edo\_auth\_redis\_host|127.0.0.1|使用する redis のアドレス|
+|$edo\_auth\_redis\_port|6379|使用する redis のポート番号|
+|$edo\_auth\_public\_key\_directory||公開鍵置き場のパス|
+
+
+## 3. 動作仕様
+
+リクエストが edo-auth を通ったら、通信元 TA の認証が済んでいることを保証する。
+
+
+### 3.1. 概要
+
+認証済みの TA からのリクエストなら X-Edo-Ta-Id ヘッダでその TA の ID を付加し、未認証ならば認証を行う。
+
+
+### 3.2. リクエストの受け取り
+
++ Cookie に X-Edo-Ta-Seesion が無ければ、未認証 TA からのリクエストとして処理する。
++ X-Edo-Auth-Ta-Session の値が認証中セッションであれば、認証中 TA からのリクエストとして処理する。
++ X-Edo-Auth-Ta-Session の値が認証済みセッションであれば、認証済み TA からのリクエストとして処理する。
++ それ以外なら、未認証 TA からのリクエストとして処理する。
+
+
+### 3.3. 認証済み TA からのリクエストの処理
+
+リクエストから Cookie の X-Edo-Auth-Ta-Session を取り除き、以下のヘッダを加えて通す。
+
+|ヘッダ名|値|
+|:--|:--|
+|X-Edo-Ta-Id|セッションと紐付く TA の ID|
+
+
+### 3.4. 認証中 TA からのリクエストの処理
+
+認証中 TA からのリクエストは以下の HTTP ヘッダを含まなければならない。
+
+|ヘッダ値|値|
+|:--|:--|
+|X-Edo-Auth-Ta-Id|通信元 TA の ID|
+|X-Edo-Auth-Ta-Token-Sign|セッションと紐付く乱数列への署名|
+
+また、追加で以下のヘッダを含むこともある。
+
+|ヘッダ値|値|
+|:--|:--|
+|X-Edo-Auth-Hash-Function|X-Edo-Auth-Ta-Token-Sign の署名に使ったハッシュ関数|
+
+通信元 TA の公開鍵 (と X-Edo-Auth-Hash-Function で指定されたハッシュ関数) で、X-Edo-Auth-Ta-Token-Sign の値を検証する。
+問題が無ければ、セッションと通信元 TA を紐付け、認証済み TA として処理する。
+
+
+### 3.5. 未認証 TA からのリクエストの処理
+
+ランダムな文字列を生成し、セッションを作成し、セッションと生成した文字列を紐付け、以下の Set-Cookie とヘッダを含む 401 Unauthorized レスポンスを返す。
+
+|Set-Cookieラベル|値|
+|:--|:--|
+|X-Edo-Auth-Ta-Session|セッション|
+
+|ヘッダ名|値|
+|:--|:--|
+|X-Edo-Auth-Ta-Token|生成した文字列|
+|X-Edo-Auth-Ta-Error|"start new session"|
+
+
+### 3.6. エラーレスポンス
+
+edo-auth にてエラーが発生した場合、以下のヘッダを加えたレスポンスを返す。
+
+|HTTP ヘッダフィールド|値|
+|:--|:--|
+|X-Edo-Auth-Ta-Error|適当なメッセージ|
+
++ セッションの通信元アドレスが異なる場合、403 Forbidden を返す。
++ 認証中に X-Edo-Auth-Ta-Id ヘッダおよび X-Edo-Auth-Ta-Token-Sign ヘッダが無い場合、403 Forbidden を返す。
++ 通信元 TA の公開鍵が登録されていない場合、403 Forbidden を返す。
++ X-Edo-Auth-Ta-Token-Sign の検証に失敗した場合、403 Forbidden を返す。
