@@ -1,5 +1,14 @@
 #!/bin/sh -e
 
+script_dir=$(cd $(dirname $0) && pwd)
+install_dir=${install_dir:=${script_dir}}
+nginx=${nginx:=true}
+nginx_port=${nginx_port:=7000}
+proxy_pass=${proxy_pass:=http://example.org/}
+
+# フルパスにする。
+install_dir=$(cd ${install_dir} && pwd)
+
 redis_ver=${redis_ver:=2.8.17}
 luajit_ver=${luajit_ver:=2.0.3}
 lua_redis_ver=${lua_redis_ver:=688f932}
@@ -11,37 +20,20 @@ ngx_devel_kit_ver=${ngx_devel_kit_ver:=v0.2.19}
 lua_nginx_ver=${lua_nginx_ver:=v0.9.13}
 nginx_ver=${nginx_ver:=1.7.7}
 
-redis=${redis:=true}
-nginx=${nginx:=true}
-redis_port=${redis_port:=6379}
-nginx_port=${nginx_port:=7000}
+lua_dir=$(dirname $0)/lua
+src_dir=${install_dir}/src
+lib_dir=${install_dir}/lib
+nginx_dir=${install_dir}/nginx
 
-
-auth_module_dir=$(cd $(dirname $0) && pwd)
-src_dir=${auth_module_dir}/src
-lib_dir=${auth_module_dir}/lib
+luajit_dir=${lib_dir}/lua-jit
 
 mkdir -p ${src_dir}
 mkdir -p ${lib_dir}
-
-redis_dir=${lib_dir}/redis
-luajit_dir=${lib_dir}/lua-jit
-nginx_dir=${nginx_dir:=${lib_dir}/nginx}
+if ! [ -d ${install_dir}/lua ]; then
+    cp -r ${lua_dir} ${install_dir}/
+fi
 
 (cd ${src_dir}
- # redis
- if ${redis} && ! [ -d redis ]; then
-     git clone https://github.com/antirez/redis.git
- fi
- if ${redis} && ! [ -d ${redis_dir} ]; then
-     (cd redis
-      git fetch
-      git checkout ${redis_ver}
-      make clean
-      make
-      make install PREFIX=${redis_dir}
-     )
- fi
 
  # LuaJIT
  if ! [ -f LuaJIT-${luajit_ver}.tar.gz ]; then
@@ -62,27 +54,27 @@ nginx_dir=${nginx_dir:=${lib_dir}/nginx}
  if ! [ -d lua-resty-redis ]; then
      git clone https://github.com/openresty/lua-resty-redis.git
  fi
- if ! [ -d ${luajit_dir}/share/lua/5.1/resty ]; then
-     (cd lua-resty-redis
-      git fetch
-      git checkout ${lua_redis_ver}
+ (cd lua-resty-redis
+  git fetch
+  git checkout ${lua_redis_ver}
+  if ! [ -d ${luajit_dir}/share/lua/5.1/resty ]; then
       cp -rf lib/resty ${luajit_dir}/share/lua/5.1/
-     )
- fi
+  fi
+ )
 
  # lua-cjson
  if ! [ -d lua-cjson ]; then
      git clone https://github.com/mpx/lua-cjson.git
  fi
- if [ -z $(find ${luajit_dir} -path "*/cjson.so") ];then
-     (cd lua-cjson
-      git fetch
-      git checkout ${lua_cjson_ver}
+ (cd lua-cjson
+  git fetch
+  git checkout ${lua_cjson_ver}
+  if [ -z $(find ${luajit_dir} -path "*/cjson.so") ];then
       make clean
       make CFLAGS=-I${src_dir}/LuaJIT-${luajit_ver}/src
       make PREFIX=${luajit_dir} install
-     )
- fi
+  fi
+ )
 
  # openssl
  if ! [ -f openssl-${openssl_ver}.tar.gz ]; then
@@ -104,18 +96,26 @@ nginx_dir=${nginx_dir:=${lib_dir}/nginx}
  if ! [ -d lua-openssl ]; then
      git clone https://github.com/zhaozg/lua-openssl.git
  fi
- if [ -z $(find ${luajit_dir} -path "*/openssl.so") ]; then
-     (cd lua-openssl/
-      git fetch
-      git checkout ${lua_openssl_ver}
-      git submodule init
-      git submodule update
+ (cd lua-openssl/
+  git fetch
+  git checkout ${lua_openssl_ver}
+  git submodule init
+  git submodule update
+  if [ -z $(find ${luajit_dir} -path "*/openssl.so") ]; then
       make clean
       set +e # 最後の chcon が失敗するだけ。
       make PREFIX=${lib_dir}/openssl CFLAGS="-I${src_dir}/LuaJIT-${luajit_ver}/src -DPTHREADS -fPIC"
       set -e
       LUAV=5.1 make install PREFIX=${luajit_dir}
-     )
+  fi
+ )
+
+ # pcre
+ if ! [ -f pcre-8.33.tar.gz ]; then
+     wget http://downloads.sourceforge.net/project/pcre/pcre/8.33/pcre-8.33.tar.gz
+ fi
+ if ! [ -d pcre-8.33 ]; then
+     tar zxf pcre-8.33.tar.gz
  fi
 
  # headers-more
@@ -169,24 +169,21 @@ nginx_dir=${nginx_dir:=${lib_dir}/nginx}
           --with-http_sub_module \
           --with-ld-opt="-Wl,-rpath=${luajit_dir}/lib" \
           --with-openssl=${src_dir}/openssl-${openssl_ver} \
+          --with-pcre=$src_dir/pcre-8.33 \
           --add-module=${src_dir}/headers-more-nginx-module \
           --add-module=${src_dir}/ngx_devel_kit \
           --add-module=${src_dir}/lua-nginx-module
       make
       make install
 
-      sed 's/^\([ ]\+listen[ ]\+\)7000;$/\1'${nginx_port}';/' ${auth_module_dir}/sample/nginx.auth_ta.conf > ${nginx_dir}/conf/nginx.conf
+      sed 's/^\([ ]\+listen[ ]\+\)7000;$/\1'${nginx_port}';/' ${script_dir}/sample/nginx.conf | \
+          sed 's/^\([ ]\+proxy_pass[ ]\+\)http:\/\/example\.org\/;$/\1'$(echo ${proxy_pass} | sed 's/\./\\\./g' | sed 's/\//\\\//g')';/' > \
+              ${nginx_dir}/conf/nginx.conf
      )
  fi
 )
 
 
-if ${redis} && ! nc -z localhost ${redis_port}; then
-    ${redis_dir}/bin/redis-server - <<EOF
-daemonize yes
-port ${redis_port}
-EOF
-fi
 if ${nginx} && ! nc -z localhost ${nginx_port}; then
     ${nginx_dir}/sbin/nginx
 fi
