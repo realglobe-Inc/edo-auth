@@ -1,2 +1,3 @@
-edo-sso
-=======
+# edo-auth
+
+Apache License, Version 2.0
