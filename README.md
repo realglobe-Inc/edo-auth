@@ -1,2 +1,1 @@
-edo-sso
-=======
+# edo-auth
