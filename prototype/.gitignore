@@ -1,5 +1,0 @@
-tmp/*
-src/*
-lib/*
-nginx.conf/*.conf
-lua/lib/config.lua
