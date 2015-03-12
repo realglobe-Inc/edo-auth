@@ -21,9 +21,6 @@ nginx=${nginx:=true}
 nginx_port=${nginx_port:=7000}
 proxy_pass=${proxy_pass:=http://example.org/}
 
-# フルパスにする。
-install_dir=$(cd ${install_dir} && pwd)
-
 redis_ver=${redis_ver:=2.8.17}
 luajit_ver=${luajit_ver:=2.0.3}
 lua_redis_ver=${lua_redis_ver:=688f932}
@@ -34,6 +31,11 @@ headers_more_ver=${headers_more_ver:=v0.25}
 ngx_devel_kit_ver=${ngx_devel_kit_ver:=v0.2.19}
 lua_nginx_ver=${lua_nginx_ver:=v0.9.13}
 nginx_ver=${nginx_ver:=1.7.7}
+
+
+mkdir -p ${install_dir}
+# フルパスにする。
+install_dir=$(cd ${install_dir} && pwd)
 
 lua_dir=$(dirname $0)/lua
 src_dir=${install_dir}/src
