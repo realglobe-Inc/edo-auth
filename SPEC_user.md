@@ -41,7 +41,7 @@ limitations under the License.
 
 |Cookie 名|値|
 |:--|:--|
-|X-Edo-Auth-User|セッション ID|
+|Auth-User|セッション ID|
 
 リクエスト時に、セッション ID が通知されなかった場合、セッションを発行する。
 セッションの期限に余裕がない場合、設定を引き継いだセッションを発行する。
@@ -54,7 +54,7 @@ limitations under the License.
 ユーザー認証処理を代行し、アカウント情報をリクエストに付加する。
 
 * アカウント情報と紐付くセッションの場合、
-    * Cookie から X-Edo-Auth-User を除去する。
+    * Cookie から Auth-User を除去する。
       セッションに紐付くアカウント情報を付加する。
 * そうでなければ、リクエスト内容をセッションに紐付ける。
   ユーザー認証機構（IdP または IdP 選択サービス）にリダイレクトさせる。
@@ -90,7 +90,7 @@ HTTP ヘッダにて行う。
 ```http
 GET /ui/index.html HTTP/1.1
 Host: ta.example.org
-Cookie: X-Edo-Auth-User=vmU7_v0qxDaCEg-8dHCNANAPVL-8Lj
+Cookie: Auth-User=vmU7_v0qxDaCEg-8dHCNANAPVL-8Lj
 ```
 
 通過後は、
@@ -128,7 +128,7 @@ X-Edo-User: eyJhbGciOiJub25lIn0.eyJhdF9leHAiOjE0MjY1NjEyNjIsImF0X3RhZyI6IjJFeXdo
 
 ```http
 HTTP/1.1 302 Found
-Set-Cookie: X-Edo-Auth-User=vmU7_v0qxDaCEg-8dHCNANAPVL-8Lj;
+Set-Cookie: Auth-User=vmU7_v0qxDaCEg-8dHCNANAPVL-8Lj;
     Expires=Tue, 24 Mar 2015 01:59:18 GMT; Path=/; Secure; HttpOnly
 Location: https://selector.example.org/?response_type=code%20id_token
     &scope=openid&client_id=https%3A%2F%2Fta.example.org
@@ -168,7 +168,7 @@ GET /return?code=AFnKabazoCv99dVErDtxs5RYVmwh6R
     DZRciIsInN1YiI6IjE5NTA0MTYyOTc3M0FFQ0MifQ.vevlIy6dviR6Khj8XX-zJttxEbSRych8PI
     wnCQpfTttMMok2xQJu0Pgg2y5a336NOZnQLgJZgLSN4QldZb-oFA&state=Ito-lCrO2H
 Host: ta.example.org
-Cookie: X-Edo-Auth-User=vmU7_v0qxDaCEg-8dHCNANAPVL-8Lj
+Cookie: Auth-User=vmU7_v0qxDaCEg-8dHCNANAPVL-8Lj
 ```
 
 改行とインデントは表示の都合による。
@@ -178,7 +178,7 @@ Cookie: X-Edo-Auth-User=vmU7_v0qxDaCEg-8dHCNANAPVL-8Lj
 
 ```http
 HTTP/1.1 302 Found
-Set-Cookie: X-Edo-Auth-User=UpmP-WGyxducqFqEviJyQnVjPdpZ1Q;
+Set-Cookie: Auth-User=UpmP-WGyxducqFqEviJyQnVjPdpZ1Q;
     Expires=Tue, 24 Mar 2015 02:01:10 GMT; Path=/; Secure; HttpOnly
 Location: /ui/index.html
 ```
