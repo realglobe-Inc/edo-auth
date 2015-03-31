@@ -67,7 +67,7 @@ HTTP ヘッダにて行う。
 
 |HTTP ヘッダ名|値|
 |:--|:--|
-|X-Edo-User|クレームセットとしてアカウント情報を含む `alg` が `none` な [JWT]|
+|X-Auth-User|クレームセットとしてアカウント情報を含む `alg` が `none` な [JWT]|
 
 アカウント情報は以下の要素を含む。
 
@@ -98,7 +98,7 @@ Cookie: Auth-User=vmU7_v0qxDaCEg-8dHCNANAPVL-8Lj
 ```http
 GET /ui/index.html HTTP/1.1
 Host: ta.example.org
-X-Edo-User: eyJhbGciOiJub25lIn0.eyJhdF9leHAiOjE0MjY1NjEyNjIsImF0X3RhZyI6IjJFeXdo
+X-Auth-User: eyJhbGciOiJub25lIn0.eyJhdF9leHAiOjE0MjY1NjEyNjIsImF0X3RhZyI6IjJFeXdo
     MVo0dFoiLCJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLm9yZyIsInN1YiI6IjE5NTA0MTYyOTc3
     M0FFQ0MifQ.
 ```
