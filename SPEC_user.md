@@ -54,7 +54,7 @@ limitations under the License.
 ユーザー認証処理を代行し、アカウント情報をリクエストに付加する。
 
 * アカウント情報と紐付くセッションの場合、
-    * Cookie からセッション情報を除去する。
+    * Cookie から X-Edo-Auth-User を除去する。
       セッションに紐付くアカウント情報を付加する。
 * そうでなければ、リクエスト内容をセッションに紐付ける。
   ユーザー認証機構（IdP または IdP 選択サービス）にリダイレクトさせる。
@@ -72,7 +72,7 @@ HTTP ヘッダにて行う。
 アカウント情報は以下の要素を含む。
 
 * **`iss`**
-    * IdP の ID。
+    * アカウントが属す IdP の ID。
 * **`sub`**
     * アカウント ID。
 * **`at_tag`**
@@ -88,7 +88,7 @@ HTTP ヘッダにて行う。
 元のリクエストは、
 
 ```http
-GET / HTTP/1.1
+GET /ui/index.html HTTP/1.1
 Host: ta.example.org
 Cookie: X-Edo-Auth-User=vmU7_v0qxDaCEg-8dHCNANAPVL-8Lj
 ```
@@ -96,7 +96,7 @@ Cookie: X-Edo-Auth-User=vmU7_v0qxDaCEg-8dHCNANAPVL-8Lj
 通過後は、
 
 ```http
-GET / HTTP/1.1
+GET /ui/index.html HTTP/1.1
 Host: ta.example.org
 X-Edo-User: eyJhbGciOiJub25lIn0.eyJhdF9leHAiOjE0MjY1NjEyNjIsImF0X3RhZyI6IjJFeXdo
     MVo0dFoiLCJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLm9yZyIsInN1YiI6IjE5NTA0MTYyOTc3
@@ -142,7 +142,7 @@ Location: https://selector.example.org/?response_type=code%20id_token
 ## 4. リダイレクトエンドポイント
 
 ユーザー認証機構へのリダイレクト時に `redirect_uri` パラメータとして与えるエンドポイント。
-ユーザー認証後のセッション更新とリダイレクトを行う。
+ユーザー認証後のセッション設定とリダイレクトを行う。
 
 * `state` がセッションに紐付くものと異なる、または、付加されたパラメータがエラーや不正な場合、
     * エラーを返す。
@@ -153,8 +153,9 @@ Location: https://selector.example.org/?response_type=code%20id_token
 * `nonce` がセッションに紐付くものと異なる場合、
     * エラーを返す。
 * そうでなければ、設定を引き継いだセッションを発行する。
+  セッションとリクエスト内容、state, nonce との紐付けを解く。
   アクセストークンとアカウント情報をセッションに紐付ける。
-  セッションに紐付くリクエスト内容を再現するようにリダイレクトさせる。
+  リクエスト内容を再現するようにリダイレクトさせる。
 
 
 ### 4.1. リクエスト例
@@ -179,7 +180,7 @@ Cookie: X-Edo-Auth-User=vmU7_v0qxDaCEg-8dHCNANAPVL-8Lj
 HTTP/1.1 302 Found
 Set-Cookie: X-Edo-Auth-User=UpmP-WGyxducqFqEviJyQnVjPdpZ1Q;
     Expires=Tue, 24 Mar 2015 02:01:10 GMT; Path=/; Secure; HttpOnly
-Location: /
+Location: /ui/index.html
 ```
 
 
@@ -214,6 +215,8 @@ edo-access-proxy を通した TA 間連携等のためにアクセストーク�
 
 #### 6.1.1. IdP 情報
 
+IdP 選択サービスを使う場合に必要。
+
 以下を含む。
 
 * ID
@@ -236,6 +239,7 @@ edo-access-proxy の TA 間連携等で利用する。
 * タグ
 * 有効期限
 * 発行 IdP の ID
+* 許可スコープ
 
 以下の操作が必要。
 
@@ -250,7 +254,11 @@ edo-access-proxy の TA 間連携等で利用する。
 以下を含む。
 
 * ID \*
+* 有効期限 \*
 * アクセストークン \*
+    * ID
+    * タグ
+    * 有効期限
 * アカウント情報 \*
 * リクエスト内容
 * `state`
@@ -263,6 +271,7 @@ edo-access-proxy の TA 間連携等で利用する。
 * 保存
 * ID による取得
 * 上書き
+    * ID、有効期限、アクセストークン、アカウント情報以外。
 
 
 <!-- 参照 -->
