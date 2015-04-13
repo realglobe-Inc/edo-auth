@@ -43,10 +43,16 @@ limitations under the License.
 |:--|:--|
 |Auth-User|セッション ID|
 
-リクエスト時に、セッション ID が通知されなかった場合、セッションを発行する。
+リクエスト時に、有効なセッションが宣言されなかった場合、セッションを発行する。
 セッションの期限に余裕がない場合、設定を引き継いだセッションを発行する。
 
 レスポンス時に、未通知のセッション ID を通知する。
+
+||利用|新規発行|引き継ぎ発行|
+|:--|:--:|:--:|:--:|
+|ユーザー認証処理代行|yes|yes|yes|
+|リダイレクト|yes|yes|no|
+|更新|yse|yes|no|
 
 
 ## 3. ユーザー認証処理代行
@@ -128,8 +134,6 @@ X-Auth-User: eyJhbGciOiJub25lIn0.eyJhdF9leHAiOjE0MjY1NjEyNjIsImF0X3RhZyI6IjJFeXd
 
 ```http
 HTTP/1.1 302 Found
-Set-Cookie: Auth-User=vmU7_v0qxDaCEg-8dHCNANAPVL-8Lj;
-    Expires=Tue, 24 Mar 2015 01:59:18 GMT; Path=/; Secure; HttpOnly
 Location: https://selector.example.org/?response_type=code%20id_token
     &scope=openid&client_id=https%3A%2F%2Fta.example.org
     &redirect_uri=https%3A%2F%2Fta.example.org%2Freturn&state=Ito-lCrO2H
@@ -178,8 +182,6 @@ Cookie: Auth-User=vmU7_v0qxDaCEg-8dHCNANAPVL-8Lj
 
 ```http
 HTTP/1.1 302 Found
-Set-Cookie: Auth-User=UpmP-WGyxducqFqEviJyQnVjPdpZ1Q;
-    Expires=Tue, 24 Mar 2015 02:01:10 GMT; Path=/; Secure; HttpOnly
 Location: /ui/index.html
 ```
 

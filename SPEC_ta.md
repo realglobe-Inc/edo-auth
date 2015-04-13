@@ -38,7 +38,7 @@ limitations under the License.
 
 ```
 +--------+                                    +--------+
-|        |--------(1) request + codes-------->|        |                      
+|        |--------(1) request + codes-------->|        |
 |        |                                    |        |
 |        |    +--------+                      |        |
 |        |    |        |<---(2-1) code--------|        |
@@ -88,16 +88,16 @@ limitations under the License.
 
 ## 5. リクエストの転送
 
-リクエストから付加された仲介コードや Cookie の Edo-Cooperation を削除する。
-HTTP ヘッダにて仲介情報を付加する。
+リクエストから仲介コードや Cookie の Edo-Cooperation を削除する。
+以下の HTTP ヘッダにて仲介情報を付加する。
 
 * X-Auth-User
-    * クレームセットとして処理の主体の情報を含む `alg` が `none` な [JWT]。
+    * 処理の主体の情報をクレームセットに含む `alg` が `none` な [JWT]。
 * X-Auth-User-Tag
     * 処理の主体のアカウントタグ。
 * X-Auth-Related-Users
     * 処理の主体でないアカウントが含まれる場合のみ。
-      クレームセットとして、処理の主体でないアカウント全てに対するアカウントタグからアカウント情報へのマップを含む `alg` が `none` な [JWT]。
+      処理の主体でないアカウント全てについて、アカウントタグからアカウント情報へのマップをクレームセットに含む `alg` が `none` な [JWT]。
 * X-Auth-Ta
     * 要請元 TA の ID。
 
@@ -217,6 +217,7 @@ X-Auth-Related-Users のクレームセットは、
 * タグ
 * 有効期限
 * 発行 IdP の ID
+* 許可スコープ
 
 以下の操作が必要。
 
