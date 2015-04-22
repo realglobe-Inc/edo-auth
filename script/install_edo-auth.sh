@@ -33,8 +33,8 @@ nginx_dir=${nginx_dir:=${install_dir}/opt/nginx}
 if ! [ -d ${nginx_dir}/lua/lib ]; then
     mkdir -p ${nginx_dir}/lua/lib
 fi
-cp -r ${project_dir}/*.lua ${nginx_dir}/lua/
-cp -r ${project_dir}/lib/*.lua ${nginx_dir}/lua/lib/
+cp ${project_dir}/*.lua ${nginx_dir}/lua/
+cp ${project_dir}/lib/*.lua ${nginx_dir}/lua/lib/
 
 
 echo "---------- edo-auth was installed in ${install_dir} ----------"
