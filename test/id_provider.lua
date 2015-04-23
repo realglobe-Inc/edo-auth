@@ -21,16 +21,19 @@ local id_provider = require("lib.id_provider")
 
 local id = "UhotYNPpXV2gw_4T4aTPRdEeZ1M7C3"
 local veri_keys = {
-   [""] = [[-----BEGIN EC PRIVATE KEY-----
-MHcCAQEEIPFUo1nmauOJltxl0nfaVx3BEZ6wdg+hRI+S8OfUIDQaoAoGCCqGSM49
-AwEHoUQDQgAE3tfF/QYgrjnyDzRPycEyx0yZUvX2xZS8JFQb74c91Oi5OtThEZDq
-iyltctMoRBmc1JBq9Doh5ZybUQio1aV46A==
------END EC PRIVATE KEY-----]],
+   [""] = {
+      ["kty"] = "EC-pem-pub",
+      ["b"] = [[-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE3tfF/QYgrjnyDzRPycEyx0yZUvX2
+xZS8JFQb74c91Oi5OtThEZDqiyltctMoRBmc1JBq9Doh5ZybUQio1aV46A==
+-----END PUBLIC KEY-----]],
+   },
 }
 local tok_uri = "https://idp.example.org/token"
 local acnt_uri = "https://idp.example.org/userinfo"
+local coop_to_uri = "https://idp.example.org/cooperation/to"
 
-local idp = id_provider.new(id, veri_keys, tok_uri, acnt_uri)
+local idp = id_provider.new(id, veri_keys, tok_uri, acnt_uri, coop_to_uri)
 if idp:get_id() ~= id then
    return test.response_error("id is " .. idp:get_id() .. " not " .. id)
 elseif not tutil.equal(idp:get_verify_keys(), veri_keys) then
@@ -39,9 +42,11 @@ elseif idp:get_token_uri() ~= tok_uri then
    return test.response_error("access token uri is " .. idp:get_token_uri() .. " not " .. tok_uri)
 elseif idp:get_account_uri() ~= acnt_uri then
    return test.response_error("account info uri is " .. idp:get_account_uri() .. " not " .. acnt_uri)
+elseif idp:get_cooperation_to_uri() ~= coop_to_uri then
+   return test.response_error("cooperation to uri is " .. idp:get_cooperation_to_uri() .. " not " .. coop_to_uri)
 end
 
-local idp2 = id_provider.new(id, veri_keys, tok_uri, acnt_uri)
+local idp2 = id_provider.new(id, veri_keys, tok_uri, acnt_uri, coop_to_uri)
 if idp2 ~= idp then
    return test.response_error("failed to equal " .. tutil.to_string(idp2:to_table()) .. " not " .. tutil.to_string(idp:to_table()))
 end

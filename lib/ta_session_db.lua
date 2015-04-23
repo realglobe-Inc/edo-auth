@@ -13,7 +13,7 @@
 -- limitations under the License.
 
 local cjson = require("cjson.safe")
-local session = require("lib.user_session")
+local session = require("lib.ta_session")
 local redis_db = require("lib.redis_db")
 
 

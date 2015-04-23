@@ -278,18 +278,23 @@ EOF
 
 
  # ############################################################
- ${REDIS_CLIENT} -p ${REDIS_PORT} flushall > /dev/null
- mkdir -p idp
  cat <<EOF > idp/https%3A%2F%2Fidp.example.org.json
 {
     "issuer": "https://idp.example.org",
     "token_endpoint": "https://idp.example.org/token",
     "userinfo_endpoint": "https://idp.example.org/userinfo",
-    "verify_keys": {
-        "": "-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEIPFUo1nmauOJltxl0nfaVx3BEZ6wdg+hRI+S8OfUIDQaoAoGCCqGSM49\nAwEHoUQDQgAE3tfF/QYgrjnyDzRPycEyx0yZUvX2xZS8JFQb74c91Oi5OtThEZDq\niyltctMoRBmc1JBq9Doh5ZybUQio1aV46A==\n-----END EC PRIVATE KEY-----"
-    }
+    "cooperation_to_endpoint": "https://idp.example.org/cooperation/to",
+    "keys": [
+        {
+            "kty": "EC-pem-pub",
+            "b": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE3tfF/QYgrjnyDzRPycEyx0yZUvX2\nxZS8JFQb74c91Oi5OtThEZDqiyltctMoRBmc1JBq9Doh5ZybUQio1aV46A==\n-----END PUBLIC KEY-----"
+        }
+    ]
 }
 EOF
+
+ ${REDIS_CLIENT} -p ${REDIS_PORT} flushall > /dev/null
+ mkdir -p idp
  cat <<EOF > ${nginx_prefix}/conf/nginx.conf
 events {}
 http {
@@ -300,7 +305,7 @@ http {
             set \$idp_dir ../idp;
             set \$redis_host 127.0.0.1;
             set \$redis_port ${REDIS_PORT};
-            access_by_lua_file lua/test/id_provider_db.lua;
+            access_by_lua_file lua/test/id_provider_file_db.lua;
         }
     }
 }
@@ -308,14 +313,99 @@ EOF
  ${NGINX_DIR}/sbin/nginx -p ${nginx_prefix} -s reload
  sleep ${INTERVAL}
 
- 
  result=$(curl -o out -s -w "%{http_code}" http://localhost:${NGINX_PORT})
  if [ "${result}" != "200" ]; then
      echo ${result} 1>&2
      cat out 1>&2
      exit 1
  fi
- echo "===== id provider database passed ====="
+ echo "===== id provider file database passed ====="
+
+
+ # ############################################################
+ ${REDIS_CLIENT} -p ${REDIS_PORT} flushall > /dev/null
+ mkdir -p idp
+ cat <<EOF > ${nginx_prefix}/conf/nginx.conf
+events {}
+http {
+    lua_package_path '\$prefix/lua/?.lua;;';
+    server {
+        listen       ${NGINX_PORT};
+        location /id_provider/ {
+            alias ../idp/;
+        }
+        location / {
+            set \$idp_loc '/id_provider';
+            set \$redis_host 127.0.0.1;
+            set \$redis_port ${REDIS_PORT};
+            access_by_lua_file lua/test/id_provider_location_db.lua;
+        }
+    }
+}
+EOF
+ ${NGINX_DIR}/sbin/nginx -p ${nginx_prefix} -s reload
+ sleep ${INTERVAL}
+
+ result=$(curl -o out -s -w "%{http_code}" http://localhost:${NGINX_PORT})
+ if [ "${result}" != "200" ]; then
+     echo ${result} 1>&2
+     cat out 1>&2
+     exit 1
+ fi
+ echo "===== id provider location database passed ====="
+
+
+ # ############################################################
+ cat <<EOF > ${nginx_prefix}/conf/nginx.conf
+events {}
+http {
+    lua_package_path '\$prefix/lua/?.lua;;';
+    server {
+        listen       ${NGINX_PORT};
+        location / {
+            access_by_lua_file lua/test/ta_session.lua;
+        }
+    }
+}
+EOF
+ ${NGINX_DIR}/sbin/nginx -p ${nginx_prefix} -s reload
+ sleep ${INTERVAL}
+
+ result=$(curl -o out -s -w "%{http_code}" http://localhost:${NGINX_PORT})
+ if [ "${result}" != "200" ]; then
+     echo ${result} 1>&2
+     cat out 1>&2
+     exit 1
+ fi
+ echo "===== TA session passed ====="
+
+
+ # ############################################################
+ ${REDIS_CLIENT} -p ${REDIS_PORT} flushall > /dev/null
+ cat <<EOF > ${nginx_prefix}/conf/nginx.conf
+events {}
+http {
+    lua_package_path '\$prefix/lua/?.lua;;';
+    server {
+        listen       ${NGINX_PORT};
+        location / {
+            set \$redis_host 127.0.0.1;
+            set \$redis_port ${REDIS_PORT};
+            access_by_lua_file lua/test/ta_session_db.lua;
+        }
+    }
+}
+EOF
+ ${NGINX_DIR}/sbin/nginx -p ${nginx_prefix} -s reload
+ sleep ${INTERVAL}
+
+ result=$(curl -o out -s -w "%{http_code}" http://localhost:${NGINX_PORT})
+ if [ "${result}" != "200" ]; then
+     echo ${result} 1>&2
+     cat out 1>&2
+     exit 1
+ fi
+ echo "===== TA session database passed ====="
 
 )
 

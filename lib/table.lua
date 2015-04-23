@@ -16,8 +16,7 @@ local cjson = require("cjson.safe")
 
 
 -- テーブルの比較。
--- 中身が真偽値、数値、文字列、テーブルのみ対応。
-local equal = function(t1, t2)
+local function equal(t1, t2)
    if t1 == t2 then
       return true
    elseif (not t1) or (not t2) then
@@ -27,19 +26,14 @@ local equal = function(t1, t2)
    for k, v1 in pairs(t1) do
       local v2 = t2[k]
       if v1 ~= v2 then
-         if not v2 then
+         -- 両方テーブルかつ等しい場合のみ許してやる。
+         if type(v1) ~= "table" then
+            return false
+         elseif type(v2) ~= "table" then
+            return false
+         elseif not equal(v1, v2) then
             return false
          end
-         if type(v1) == "table" then
-            if type(v2) == "table" then
-               if not equal(v1, v2) then
-                  return false
-               end
-            else
-               return false
-            end
-         end
-         return false
       end
    end
 
@@ -80,6 +74,21 @@ local keys = function(t)
    return ks
 end
 
+-- 値の配列をつくる。
+local values = function(t)
+   if not t then
+      return nil
+   end
+
+   local vs = {}
+   local i = 1
+   for _, v in pairs(t) do
+      vs[i] = v
+      i = i + 1
+   end
+   return vs
+end
+
 -- 配列を集合形式にする。
 local array_to_set = function(t)
    if not t then
@@ -98,5 +107,6 @@ return {
    equal = equal,
    to_string = to_string,
    keys = keys,
+   values = values,
    array_to_set = array_to_set,
 }

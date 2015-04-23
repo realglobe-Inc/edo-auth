@@ -15,16 +15,16 @@
 local tutil = require("lib.table")
 
 
--- セッション。
+-- ユーザーセッション。
 --
 -- {
---     id,     -- セッション ID。
---     exp,    -- 有効期限。UNIX 時間。
---     acstok, -- ユーザー認証にて発行されたアクセストークンの情報。
---     acnt,   -- ユーザー認証にて得られたアカウント情報。
---     req,    -- ユーザー認証前のリクエスト内容。
---     stat,   -- ユーザー認証用 state。
---     nonc,   -- ユーザー認証用 nonce。
+--     id,   -- セッション ID。
+--     exp,  -- 有効期限。UNIX 時間。
+--     tok,  -- ユーザー認証にて発行されたアクセストークンの情報。
+--     acnt, -- ユーザー認証にて得られたアカウント情報。
+--     req,  -- ユーザー認証前のリクエスト内容。
+--     stat, -- ユーザー認証用 state。
+--     nonc, -- ユーザー認証用 nonce。
 -- }
 
 -- メソッド定義。
@@ -42,11 +42,11 @@ local session = {
 
    -- 紐付くアクセストークンを返す。
    get_access_token = function(self)
-      return self.acstok
+      return self.tok
    end,
 
-   set_access_token = function(self, acstok)
-      self.acstok = acstok
+   set_access_token = function(self, tok)
+      self.tok = tok
    end,
 
    -- 紐付くアカウント情報を返す。
@@ -87,14 +87,14 @@ local session = {
 
    -- cjson に渡すテーブルにする。
    to_table = function(self)
-      local acstok
-      if self.acstok then
-         acstok = self.acstok:to_table()
+      local tok
+      if self.tok then
+         tok = self.tok:to_table()
       end
       return {
          id = self.id,
          expires_in = self.exp,
-         access_token = acstok,
+         access_token = tok,
          account = self.acnt,
          request = self.req,
          state = self.stat,
@@ -106,7 +106,7 @@ local session = {
 local equal = function(o1, o2)
    return o1.id == o2.id
       and o1.exp == o2.exp
-      and o1.acstok == o2.acstok
+      and o1.tok == o2.tok
       and tutil.equal(o1.acnt, o2.acnt)
       and o1.req == o2.req
       and o1.stat == o2.stat
