@@ -303,7 +303,7 @@ http {
             set \$idp_dir ../idp;
             set \$redis_host 127.0.0.1;
             set \$redis_port ${REDIS_PORT};
-            access_by_lua_file lua/test/id_provider_db.lua;
+            access_by_lua_file lua/test/id_provider_file_db.lua;
         }
     }
 }
@@ -318,7 +318,7 @@ EOF
      cat out 1>&2
      exit 1
  fi
- echo "===== id provider database passed ====="
+ echo "===== id provider file database passed ====="
 
 )
 
