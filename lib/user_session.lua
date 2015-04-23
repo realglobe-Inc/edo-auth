@@ -15,7 +15,7 @@
 local tutil = require("lib.table")
 
 
--- セッション。
+-- ユーザーセッション。
 --
 -- {
 --     id,   -- セッション ID。
