@@ -18,10 +18,11 @@ local tutil = require("lib.table")
 -- ID プロバイダ情報。
 --
 -- {
---     id,        -- ID。
---     veri_keys, -- 検証鍵。kid から JWK を基にしたテーブルへのマップ。
---     tok_uri,   -- トークンエンドポイント。
---     acnt_uri,  -- アカウント情報エンドポイント。
+--     id,          -- ID。
+--     veri_keys,   -- 検証鍵。kid から JWK を基にしたテーブルへのマップ。
+--     tok_uri,     -- トークンエンドポイント。
+--     acnt_uri,    -- アカウント情報エンドポイント。
+--     coop_to_uri, -- 要請先仲介エンドポイント。
 -- }
 
 -- 検証鍵について。
@@ -51,12 +52,18 @@ local id_provider = {
       return self.acnt_uri
    end,
 
+   -- 要請先仲介エンドポイントを返す。
+   get_cooperation_to_uri = function(self)
+      return self.coop_to_uri
+   end,
+
    to_table = function(self)
       return {
          issuer = self.id,
          verify_keys = tutil.values(self.veri_keys),
          token_endpoint = self.tok_uri,
          userinfo_endpoint = self.acnt_uri,
+         cooperation_to_endpoint = self.coop_to_uri,
       }
    end,
 }
@@ -66,15 +73,17 @@ local equal = function(o1, o2)
       and tutil.equal(o1.veri_keys, o2.veri_keys)
       and o1.tok_uri == o2.tok_uri
       and o1.acnt_uri == o2.acnt_uri
+      and o1.coop_to_uri == o2.coop_to_uri
 end
 
 -- ID プロバイダ情報を作成する。
-local new = function(id, veri_keys, tok_uri, acnt_uri)
+local new = function(id, veri_keys, tok_uri, acnt_uri, coop_to_uri)
    local obj = {
       id = id,
       veri_keys = veri_keys,
       tok_uri = tok_uri,
       acnt_uri = acnt_uri,
+      coop_to_uri = coop_to_uri,
    }
    setmetatable(obj, {
                    __index = id_provider,
@@ -116,7 +125,7 @@ local from_table = function(t)
          end
       end
    end
-   return new(t.issuer, veri_keys, t.token_endpoint, t.userinfo_endpoint)
+   return new(t.issuer, veri_keys, t.token_endpoint, t.userinfo_endpoint, t.cooperation_to_endpoint)
 end
 
 

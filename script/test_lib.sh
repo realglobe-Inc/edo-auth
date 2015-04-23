@@ -283,6 +283,7 @@ EOF
     "issuer": "https://idp.example.org",
     "token_endpoint": "https://idp.example.org/token",
     "userinfo_endpoint": "https://idp.example.org/userinfo",
+    "cooperation_to_endpoint": "https://idp.example.org/cooperation/to",
     "keys": [
         {
             "kty": "EC-pem-pub",

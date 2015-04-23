@@ -47,7 +47,8 @@ xZS8JFQb74c91Oi5OtThEZDqiyltctMoRBmc1JBq9Doh5ZybUQio1aV46A==
       },
    },
    "https://idp.example.org/token",
-   "https://idp.example.org/userinfo")
+   "https://idp.example.org/userinfo",
+   "https://idp.example.org/cooperation/to")
 
 local idp2, err = db:get(idp:get_id())
 if err then
