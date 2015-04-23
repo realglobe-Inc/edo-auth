@@ -278,8 +278,6 @@ EOF
 
 
  # ############################################################
- ${REDIS_CLIENT} -p ${REDIS_PORT} flushall > /dev/null
- mkdir -p idp
  cat <<EOF > idp/https%3A%2F%2Fidp.example.org.json
 {
     "issuer": "https://idp.example.org",
@@ -293,6 +291,9 @@ EOF
     ]
 }
 EOF
+
+ ${REDIS_CLIENT} -p ${REDIS_PORT} flushall > /dev/null
+ mkdir -p idp
  cat <<EOF > ${nginx_prefix}/conf/nginx.conf
 events {}
 http {
@@ -318,6 +319,39 @@ EOF
      exit 1
  fi
  echo "===== id provider file database passed ====="
+
+
+ # ############################################################
+ ${REDIS_CLIENT} -p ${REDIS_PORT} flushall > /dev/null
+ mkdir -p idp
+ cat <<EOF > ${nginx_prefix}/conf/nginx.conf
+events {}
+http {
+    lua_package_path '\$prefix/lua/?.lua;;';
+    server {
+        listen       ${NGINX_PORT};
+        location /id_provider/ {
+            alias ../idp/;
+        }
+        location / {
+            set \$idp_loc '/id_provider';
+            set \$redis_host 127.0.0.1;
+            set \$redis_port ${REDIS_PORT};
+            access_by_lua_file lua/test/id_provider_location_db.lua;
+        }
+    }
+}
+EOF
+ ${NGINX_DIR}/sbin/nginx -p ${nginx_prefix} -s reload
+ sleep ${INTERVAL}
+
+ result=$(curl -o out -s -w "%{http_code}" http://localhost:${NGINX_PORT})
+ if [ "${result}" != "200" ]; then
+     echo ${result} 1>&2
+     cat out 1>&2
+     exit 1
+ fi
+ echo "===== id provider location database passed ====="
 
 )
 
