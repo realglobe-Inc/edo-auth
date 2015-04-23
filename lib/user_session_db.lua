@@ -14,6 +14,7 @@
 
 local cjson = require("cjson.safe")
 local session = require("lib.user_session")
+local redis_db = require("lib.redis_db")
 
 
 -- セッション DB。
@@ -24,53 +25,18 @@ local db_redis = {
 
    -- 取得。
    get = function(self, id)
-      local _, err = self.client:connect()
+      local val, err = self.db:get(id)
       if err then
          return nil, err
-      end
-
-      local buff, err = self.client.redis:get(self.prefix .. id)
-      self.client:close()
-      if err then
-         return nil, err
-      elseif buff == ngx.null then
-         -- 無かった。
+      elseif val == nil then
          return nil
       end
-
-      -- あった。
-
-      local sess, err = cjson.decode(buff)
-      if err then
-         return nil, err
-      end
-      return session.from_table(sess)
+      return session.from_table(val)
    end,
 
    -- 保存。
    save = function(self, sess)
-      -- 以降の時間の掛かり方によってはちょっと長めに期限を定めていることになるけど
-      -- たぶん問題無い。
-      local exp = sess:get_expires_in() - ngx.time()
-      if exp <= 0 then
-         return
-      end
-
-      local buff, err = cjson.encode(sess:to_table())
-      if err then
-         return err
-      end
-
-      local _, err = self.client:connect()
-      if err then
-         return err
-      end
-
-      local _, err = self.client.redis:set(self.prefix .. sess:get_id(), buff, "EX", exp)
-      self.client:close()
-      if err then
-         return err
-      end
+      return self.db:save(sess:get_id(), sess:to_table(), sess:get_expires_in() - ngx.time())
    end,
 
 }
@@ -79,8 +45,7 @@ local db_redis = {
 -- redis ドライバとキーの接頭辞を指定して作成する。
 new_redis = function(client, prefix)
    local obj = {
-      client = client,
-      prefix = prefix,
+      db = redis_db.new_base(client, prefix),
    }
    setmetatable(obj, {__index = db_redis})
    return obj
