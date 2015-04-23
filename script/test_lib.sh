@@ -285,9 +285,12 @@ EOF
     "issuer": "https://idp.example.org",
     "token_endpoint": "https://idp.example.org/token",
     "userinfo_endpoint": "https://idp.example.org/userinfo",
-    "verify_keys": {
-        "": "-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEIPFUo1nmauOJltxl0nfaVx3BEZ6wdg+hRI+S8OfUIDQaoAoGCCqGSM49\nAwEHoUQDQgAE3tfF/QYgrjnyDzRPycEyx0yZUvX2xZS8JFQb74c91Oi5OtThEZDq\niyltctMoRBmc1JBq9Doh5ZybUQio1aV46A==\n-----END EC PRIVATE KEY-----"
-    }
+    "keys": [
+        {
+            "kty": "EC-pem-pub",
+            "b": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE3tfF/QYgrjnyDzRPycEyx0yZUvX2\nxZS8JFQb74c91Oi5OtThEZDqiyltctMoRBmc1JBq9Doh5ZybUQio1aV46A==\n-----END PUBLIC KEY-----"
+        }
+    ]
 }
 EOF
  cat <<EOF > ${nginx_prefix}/conf/nginx.conf

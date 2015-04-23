@@ -36,11 +36,16 @@ if err then
 end
 
 local idp = id_provider.new("https://idp.example.org",
-                            { [""] = [[-----BEGIN EC PRIVATE KEY-----
-MHcCAQEEIPFUo1nmauOJltxl0nfaVx3BEZ6wdg+hRI+S8OfUIDQaoAoGCCqGSM49
-AwEHoUQDQgAE3tfF/QYgrjnyDzRPycEyx0yZUvX2xZS8JFQb74c91Oi5OtThEZDq
-iyltctMoRBmc1JBq9Doh5ZybUQio1aV46A==
------END EC PRIVATE KEY-----]] }, "https://idp.example.org/token",
+                            {
+                               [""] = {
+                                  ["kty"] = "EC-pem-pub",
+                                  ["b"] = [[-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE3tfF/QYgrjnyDzRPycEyx0yZUvX2
+xZS8JFQb74c91Oi5OtThEZDqiyltctMoRBmc1JBq9Doh5ZybUQio1aV46A==
+-----END PUBLIC KEY-----]],
+                               },
+                            },
+                            "https://idp.example.org/token",
                             "https://idp.example.org/userinfo")
 
 local idp2, err = db:get(idp:get_id())

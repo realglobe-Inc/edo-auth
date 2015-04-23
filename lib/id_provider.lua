@@ -19,10 +19,14 @@ local tutil = require("lib.table")
 --
 -- {
 --     id,        -- ID。
---     veri_keys, -- 検証鍵。現状では JWK を扱えないため、kid から PEM 形式の文字列へのマップとする。
+--     veri_keys, -- 検証鍵。kid から JWK を基にしたテーブルへのマップ。
 --     tok_uri,   -- トークンエンドポイント。
 --     acnt_uri,  -- アカウント情報エンドポイント。
 -- }
+
+-- 検証鍵について。
+-- 現状ではまともに JWK を扱えないため、RSA-pem-pub と EC-pem-pub 形式を定義する。
+-- どちらも PEM 形式の公開鍵を b 要素に入れたものとする。
 
 -- メソッド定義。
 local id_provider = {
@@ -45,6 +49,15 @@ local id_provider = {
    -- アカウント情報エンドポイントを返す。
    get_account_uri = function(self)
       return self.acnt_uri
+   end,
+
+   to_table = function(self)
+      return {
+         issuer = self.id,
+         verify_keys = tutil.values(self.veri_keys),
+         token_endpoint = self.tok_uri,
+         userinfo_endpoint = self.acnt_uri,
+      }
    end,
 }
 
@@ -71,9 +84,39 @@ local new = function(id, veri_keys, tok_uri, acnt_uri)
 end
 
 
+local is_verify_jwk = function(key)
+   if key.use == "enc" then
+      -- 暗号用だった。
+      return false
+   elseif key.key_ops then
+      for _, v in pairs(key.key_ops) do
+         if v == "verify" then
+            -- 検証用だった。
+            return true
+         end
+      end
+      -- 検証用ではなかった。
+      return false
+   end
+   -- 用途が指定されてなかった。
+   return key
+end
+
 -- テーブルからつくる。
+-- keys から検証用の鍵だけを抜き出して verify_keys にする。
 local from_table = function(t)
-   return new(t.issuer, t.verify_keys, t.token_endpoint, t.userinfo_endpoint)
+   local veri_keys
+   if t.keys then
+      for _, key in pairs(t.keys) do
+         if is_verify_jwk(key) then
+            if not veri_keys then
+               veri_keys = {}
+            end
+            veri_keys[key.kid or ""] = key
+         end
+      end
+   end
+   return new(t.issuer, veri_keys, t.token_endpoint, t.userinfo_endpoint)
 end
 
 
