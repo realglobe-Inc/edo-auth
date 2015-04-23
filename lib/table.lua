@@ -74,6 +74,21 @@ local keys = function(t)
    return ks
 end
 
+-- 値の配列をつくる。
+local values = function(t)
+   if not t then
+      return nil
+   end
+
+   local vs = {}
+   local i = 1
+   for _, v in pairs(t) do
+      vs[i] = v
+      i = i + 1
+   end
+   return vs
+end
+
 -- 配列を集合形式にする。
 local array_to_set = function(t)
    if not t then
@@ -92,5 +107,6 @@ return {
    equal = equal,
    to_string = to_string,
    keys = keys,
+   values = values,
    array_to_set = array_to_set,
 }
