@@ -311,7 +311,6 @@ EOF
  ${NGINX_DIR}/sbin/nginx -p ${nginx_prefix} -s reload
  sleep ${INTERVAL}
 
- 
  result=$(curl -o out -s -w "%{http_code}" http://localhost:${NGINX_PORT})
  if [ "${result}" != "200" ]; then
      echo ${result} 1>&2
