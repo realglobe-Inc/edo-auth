@@ -12,40 +12,60 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-local cjson = require("cjson.safe")
 local session = require("lib.user_session")
-local redis_db = require("lib.redis_db")
 
 
 -- セッション DB。
 -- バックエンドのデータもこのプログラム専用の前提。
+-- セッション ID をキーにアカウント情報を保存する。
 
 -- メソッド定義。
 local db_redis = {
 
    -- 取得。
    get = function(self, id)
-      local val, err = self.db:get(id)
+      local _, err = self.redis:connect()
       if err then
          return nil, err
-      elseif val == nil then
+      end
+
+      local acnt, err = self.redis.base:get(self.prefix .. id)
+      self.redis:close()
+      if err then
+         return nil, err
+      elseif acnt == ngx.null then
+         -- 無かった。
          return nil
       end
-      return session.from_table(val)
+
+      return session.new(id, acnt)
    end,
 
    -- 保存。
-   save = function(self, sess)
-      return self.db:save(sess:get_id(), sess:to_table(), sess:get_expires_in() - ngx.time())
-   end,
+   save = function(self, sess, exp_in)
+      if exp_in <= 0 then
+         return
+      end
 
+      local _, err = self.redis:connect()
+      if err then
+         return err
+      end
+
+      local _, err = self.redis.base:set(self.prefix .. sess:get_id(), sess:get_account(), "EX", exp_in)
+      self.redis:close()
+      if err then
+         return err
+      end
+   end,
 }
 
 
 -- redis ドライバとキーの接頭辞を指定して作成する。
-new_redis = function(client, prefix)
+new_redis = function(redis, prefix)
    local obj = {
-      db = redis_db.new_base(client, prefix),
+      redis = redis,
+      prefix = prefix,
    }
    setmetatable(obj, {__index = db_redis})
    return obj

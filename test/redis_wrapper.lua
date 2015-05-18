@@ -13,12 +13,12 @@
 -- limitations under the License.
 
 local test = require("test.test")
-local redis = require("lib.redis")
+local redis_wrapper = require("lib.redis_wrapper")
 
 
 -- 成功したら 200 OK を返す。
 
-local client, err = redis.new(ngx.var.redis_host, ngx.var.redis_port, 1000, 10 * 1000, 16)
+local client, err = redis_wrapper.new(ngx.var.redis_host, ngx.var.redis_port, 1000, 10 * 1000, 16)
 if err then
    return test.response_error("new failed: " .. err)
 end
@@ -29,12 +29,12 @@ local test = function(k, v)
       return test.response_error("connect failed: " .. err)
    end
 
-   local _, err = client.redis:set(k, v, "ex", 1)
+   local _, err = client.base:set(k, v, "ex", 1)
    if err then
       return test.response_error("set failed: " .. err)
    end
 
-   local buff, err = client.redis:get(k)
+   local buff, err = client.base:get(k)
    if err then
       return test.response_error("get failed: " .. err)
    elseif not buff then

@@ -42,40 +42,6 @@ mkdir -p ${src_dir}
 
 (cd ${src_dir}
 
- # zlib
- if ! [ -f ${install_dir}/lib/libz.so ]; then
-     if ! [ -d zlib-${zlib_ver} ]; then
-         if ! [ -f zlib-${zlib_ver}.tar.gz ]; then
-             wget http://zlib.net/zlib-${zlib_ver}.tar.gz
-         fi
-         tar zxf zlib-${zlib_ver}.tar.gz
-     fi
-     (cd zlib-${zlib_ver}
-      ./configure --prefix=${install_dir}
-      make clean
-      make
-      make install
-     )
- fi
-
- # openssl
- if ! [ -f ${install_dir}/lib/libssl.so ]; then
-     if ! [ -d openssl-${openssl_ver} ]; then
-         if ! [ -f openssl-${openssl_ver}.tar.gz ]; then
-             wget http://www.openssl.org/source/openssl-${openssl_ver}.tar.gz
-         fi
-         tar zxf openssl-${openssl_ver}.tar.gz
-     fi
-     (cd openssl-${openssl_ver}
-      ./config --prefix=${install_dir} --openssldir=${install_dir}/etc/ssl \
-               --with-zlib-lib=${install_dir}/lib --with-zlib-include=${install_dir}/include \
-               -fPIC shared zlib-dynamic threads
-      make clean
-      make
-      make install
-     )
- fi
-
  # lua-resty-redis
  if ! [ -d ${install_dir}/share/lua/5.1/resty ]; then
      if ! [ -d lua-resty-redis ]; then
@@ -99,23 +65,6 @@ mkdir -p ${src_dir}
       make clean
       make CFLAGS=-I${src_dir}/LuaJIT-${luajit_ver}/src
       make PREFIX=${install_dir} install
-     )
- fi
-
- # lua-openssl
- if ! [ -f ${install_dir}/lib/lua/5.1/openssl.so ]; then
-     if ! [ -d lua-openssl ]; then
-         git clone https://github.com/zhaozg/lua-openssl.git
-     fi
-     (cd lua-openssl/
-      git fetch
-      git checkout ${lua_openssl_ver}
-      git submodule init
-      git submodule update
-      export PKG_CONFIG_PATH=${install_dir}/lib/pkgconfig:${PKG_CONFIG_PATH}
-      make clean
-      make
-      LUAV=5.1 make install PREFIX=${install_dir}
      )
  fi
 )
