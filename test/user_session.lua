@@ -20,68 +20,15 @@ local session = require("lib.user_session")
 -- 成功したら 200 OK を返す。
 
 local id = "MLWlc1ICtzbpvKS6ML7EHPYrP2QWM4"
-local exp = ngx.time() + 24 * 3600
-local sess = session.new(id, exp)
+local acnt = "eyJhbGciOiJSUzI1NiIsImtpZCI6IjFlOWdkazcifQ.ewogImlzcyI6ICJodHRwOi8vc2VydmVyLmV4YW1wbGUuY29tIiwKICJzdWIiOiAiMjQ4Mjg5NzYxMDAxIiwKICJhdWQiOiAiczZCaGRSa3F0MyIsCiAibm9uY2UiOiAibi0wUzZfV3pBMk1qIiwKICJleHAiOiAxMzExMjgxOTcwLAogImlhdCI6IDEzMTEyODA5NzAKfQ.ggW8hZ1EuVLuxNuuIJKX_V8a_OMXzR0EHR9R6jgdqrOOF4daGU96Sr_P6qJp6IcmD3HP99Obi1PRs-cwh3LO-p146waJ8IhehcwL7F09JdijmBqkvPeB2T9CJNqeGpe-gccMg4vfKjkM8FcGvnzZUN4_KSP0aAp1tOJ1zZwgjxqGByKHiOtX7TpdQyHE5lcMiKPXfEIQILVq0pc_E2DzL7emopWoaoZTF_m0_N0YzFC6g6EJbOEoRoSK5hoDalrcvRYLSrQAZZKflyuVCyixEoV9GfNQC3_osjzw2PAithfubEEBLuVVk4XUVrWOLrLl0nx7RkKU8NXNHq-rvKMzqg"
+local sess = session.new(id, acnt)
 if sess:get_id() ~= id then
    return test.response_error("id is " .. sess:get_id() .. " not " .. id)
-elseif sess:get_expires_in() ~= exp then
-   return test.response_error("expiration date is " .. sess:get_expires_in() .. " not " .. exp)
-elseif sess:get_access_token() then
-   return test.response_error("access token is not nil")
-elseif sess:get_account() then
-   return test.response_error("account is not nil")
-elseif sess:get_request() then
-   return test.response_error("request is not nil")
-elseif sess:get_state() then
-   return test.response_error("state is not nil")
-elseif sess:get_nonce() then
-   return test.response_error("nonce is not nil")
+elseif sess:get_account() ~= acnt then
+   return test.response_error("account info is " .. sess:get_account() .. " not " .. acnt)
 end
 
-local tok_id = "UhotYNPpXV2gw_4T4aTPRdEeZ1M7C3"
-local tok_tag = "jWBVWDzXJU"
-local tok_exp = ngx.time() + 3600
-local tok = session.new_access_token(tok_id, tok_tag, tok_exp)
-if tok:get_id() ~= tok_id then
-   return test.response_error("token id is " .. tok:get_id() .. " not " .. tok_id)
-elseif tok:get_tag() ~= tok_tag then
-   return test.response_error("token tag is " .. tok:get_tag() .. " not " .. tok_tag)
-elseif tok:get_expires_in() ~= tok_exp then
-   return test.response_error("token expiration date is " .. tok:get_expires_in() .. " not " .. tok_exp)
-end
-
-local acnt = {
-   iss = "http://idp.example.org",
-   sub = "KR1QiTN7swN17ga4",
-}
-local req = "/ui/index.html"
-local stat = "ZhcgfcW7VB"
-local nonc = "iqus5DRs3H"
-sess:set_access_token(tok)
-sess:set_account(acnt)
-sess:set_request(req)
-sess:set_state(stat)
-sess:set_nonce(nonc)
-
-if sess:get_access_token() ~= tok then
-   return test.response_error("access token is " .. tutil.to_string(sess:get_access_token():to_table()) .. " not " .. tutil.to_string(tok:to_table()))
-elseif not tutil.equal(sess:get_account(), acnt) then
-   return test.response_error("account is " .. tutil.to_string(sess:get_account()) .. " not " .. tutil.to_string(acnt))
-elseif sess:get_request() ~= req then
-   return test.response_error("request is " .. sess:get_request() .. " not " .. req)
-elseif sess:get_state() ~= stat then
-   return test.response_error("state is " .. sess:get_state() .. " not " .. stat)
-elseif sess:get_nonce() ~= nonc then
-   return test.response_error("nonce is " .. sess:get_nonce() .. " not " .. nonc)
-end
-
-local sess2 = session.new(id, exp)
-sess2:set_access_token(tok)
-sess2:set_account(acnt)
-sess2:set_request(req)
-sess2:set_state(stat)
-sess2:set_nonce(nonc)
-
+local sess2 = session.new(id, acnt)
 if sess2 ~= sess then
    return test.response_error("failed to equal " .. tutil.to_string(sess2:to_table()) .. " not " .. tutil.to_string(sess:to_table()))
 end

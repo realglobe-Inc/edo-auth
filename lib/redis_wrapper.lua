@@ -16,28 +16,26 @@ local redis = require("resty.redis")
 
 
 -- redis ドライバのラッパー。
---
--- {
---     host,         -- redis サーバーのホスト名。
---     port,         -- redis サーバーのポート番号。
---     idle_timeout, -- 接続をプールしておく期間。ミリ秒。
---     pool_size,    -- 接続をプールする数。
---     redis,        -- 接続。
--- }
+
+-- host      -- redis サーバーのホスト名。
+-- port      -- redis サーバーのポート番号。
+-- keepalive -- 接続をプールしておく期間。ミリ秒。
+-- pool_size -- 接続をプールする数。
+-- base      -- 接続。
 
 -- メソッド定義。
-local redis_client = {
+local redis_wrapper = {
 
    -- 接続またはプールから取り出す。
    -- retuen: ok, err
    connect = function(self)
-      return self.redis:connect(self.host, self.port)
+      return self.base:connect(self.host, self.port)
    end,
 
    -- 接続をプールする。
    -- retuen: ok, err
    close = function(self)
-      return self.redis:set_keepalive(self.idle_timeout, self.pool_size)
+      return self.base:set_keepalive(self.keepalive, self.pool_size)
    end
 
 }
@@ -45,21 +43,21 @@ local redis_client = {
 
 -- redis ドライバのラッパーを作成する。
 -- timeout: 応答待ちの制限時間。ミリ秒。
-local new = function(host, port, timeout, idle_timeout, pool_size)
-   local red, err = redis:new()
+local new = function(host, port, timeout, keepalive, pool_size)
+   local base, err = redis:new()
    if err then
       return nil, err
    end
-   red:set_timeout(timeout)
+   base:set_timeout(timeout)
 
    local obj = {
       host = host,
       port = port,
-      idle_timeout = idle_timeout,
+      keepalive = keepalive,
       pool_size = pool_size,
-      redis = red,
+      base = base,
    }
-   setmetatable(obj, {__index = redis_client})
+   setmetatable(obj, {__index = redis_wrapper})
    return obj
 end
 

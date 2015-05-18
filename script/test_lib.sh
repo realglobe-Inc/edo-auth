@@ -59,6 +59,7 @@ fi
  cp ${PROJECT_DIR}/lib/*.lua ${nginx_prefix}/lua/lib/
  cp ${PROJECT_DIR}/test/*.lua ${nginx_prefix}/lua/test/
 
+
  cat <<EOF > redis.conf
 daemonize yes
 port $REDIS_PORT
@@ -66,6 +67,12 @@ EOF
 
  ${REDIS_SERVER} redis.conf
  trap "${REDIS_CLIENT} -p ${REDIS_PORT} shutdown" EXIT
+
+ while ! nc -z localhost ${REDIS_PORT}; do
+     sleep ${INTERVAL}
+ done
+
+ # redis が立った。
 
  cp -r ${PROJECT_DIR}/test ${nginx_prefix}/lua/
  cat <<EOF > ${nginx_prefix}/conf/nginx.conf
@@ -85,19 +92,18 @@ EOF
  ${NGINX_DIR}/sbin/nginx -p ${nginx_prefix}
  trap "${REDIS_CLIENT} -p ${REDIS_PORT} shutdown; ${NGINX_DIR}/sbin/nginx -p ${nginx_prefix} -s stop" EXIT
 
- while ! nc -z localhost ${REDIS_PORT}; do
-     sleep ${INTERVAL}
- done
  while ! nc -z localhost ${NGINX_PORT}; do
      sleep ${INTERVAL}
  done
+
+ # nginx が立った。
 
 
  # ############################################################
  cat <<EOF > ${nginx_prefix}/conf/nginx.conf
 events {}
 http {
-    lua_package_path '\$prefix/lua/?.lua;;';
+    lua_package_path '\${prefix}lua/?.lua;;';
     server {
         listen       ${NGINX_PORT};
         location / {
@@ -129,7 +135,7 @@ http {
         location / {
             set \$redis_host 127.0.0.1;
             set \$redis_port ${REDIS_PORT};
-            access_by_lua_file lua/test/redis.lua;
+            access_by_lua_file lua/test/redis_wrapper.lua;
         }
     }
 }
@@ -197,216 +203,6 @@ EOF
      exit 1
  fi
  echo "===== user session database passed ====="
-
-
- # ############################################################
- cat <<EOF > ${nginx_prefix}/conf/nginx.conf
-events {}
-http {
-    lua_package_path '\$prefix/lua/?.lua;;';
-    server {
-        listen       ${NGINX_PORT};
-        location / {
-            access_by_lua_file lua/test/access_token.lua;
-        }
-    }
-}
-EOF
- ${NGINX_DIR}/sbin/nginx -p ${nginx_prefix} -s reload
- sleep ${INTERVAL}
-
- result=$(curl -o out -s -w "%{http_code}" http://localhost:${NGINX_PORT})
- if [ "${result}" != "200" ]; then
-     echo ${result} 1>&2
-     cat out 1>&2
-     exit 1
- fi
- echo "===== access token passed ====="
-
-
- # ############################################################
- ${REDIS_CLIENT} -p ${REDIS_PORT} flushall > /dev/null
- cat <<EOF > ${nginx_prefix}/conf/nginx.conf
-events {}
-http {
-    lua_package_path '\$prefix/lua/?.lua;;';
-    server {
-        listen       ${NGINX_PORT};
-        location / {
-            set \$redis_host 127.0.0.1;
-            set \$redis_port ${REDIS_PORT};
-            access_by_lua_file lua/test/access_token_db.lua;
-        }
-    }
-}
-EOF
- ${NGINX_DIR}/sbin/nginx -p ${nginx_prefix} -s reload
- sleep ${INTERVAL}
-
- result=$(curl -o out -s -w "%{http_code}" http://localhost:${NGINX_PORT})
- if [ "${result}" != "200" ]; then
-     echo ${result} 1>&2
-     cat out 1>&2
-     exit 1
- fi
- echo "===== access token database passed ====="
-
-
- # ############################################################
- cat <<EOF > ${nginx_prefix}/conf/nginx.conf
-events {}
-http {
-    lua_package_path '\$prefix/lua/?.lua;;';
-    server {
-        listen       ${NGINX_PORT};
-        location / {
-            access_by_lua_file lua/test/id_provider.lua;
-        }
-    }
-}
-EOF
- ${NGINX_DIR}/sbin/nginx -p ${nginx_prefix} -s reload
- sleep ${INTERVAL}
-
- result=$(curl -o out -s -w "%{http_code}" http://localhost:${NGINX_PORT})
- if [ "${result}" != "200" ]; then
-     echo ${result} 1>&2
-     cat out 1>&2
-     exit 1
- fi
- echo "===== id provider passed ====="
-
-
- # ############################################################
- cat <<EOF > idp/https%3A%2F%2Fidp.example.org.json
-{
-    "issuer": "https://idp.example.org",
-    "token_endpoint": "https://idp.example.org/token",
-    "userinfo_endpoint": "https://idp.example.org/userinfo",
-    "cooperation_to_endpoint": "https://idp.example.org/cooperation/to",
-    "keys": [
-        {
-            "kty": "EC-pem-pub",
-            "b": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE3tfF/QYgrjnyDzRPycEyx0yZUvX2\nxZS8JFQb74c91Oi5OtThEZDqiyltctMoRBmc1JBq9Doh5ZybUQio1aV46A==\n-----END PUBLIC KEY-----"
-        }
-    ]
-}
-EOF
-
- ${REDIS_CLIENT} -p ${REDIS_PORT} flushall > /dev/null
- mkdir -p idp
- cat <<EOF > ${nginx_prefix}/conf/nginx.conf
-events {}
-http {
-    lua_package_path '\$prefix/lua/?.lua;;';
-    server {
-        listen       ${NGINX_PORT};
-        location / {
-            set \$idp_dir ../idp;
-            set \$redis_host 127.0.0.1;
-            set \$redis_port ${REDIS_PORT};
-            access_by_lua_file lua/test/id_provider_file_db.lua;
-        }
-    }
-}
-EOF
- ${NGINX_DIR}/sbin/nginx -p ${nginx_prefix} -s reload
- sleep ${INTERVAL}
-
- result=$(curl -o out -s -w "%{http_code}" http://localhost:${NGINX_PORT})
- if [ "${result}" != "200" ]; then
-     echo ${result} 1>&2
-     cat out 1>&2
-     exit 1
- fi
- echo "===== id provider file database passed ====="
-
-
- # ############################################################
- ${REDIS_CLIENT} -p ${REDIS_PORT} flushall > /dev/null
- mkdir -p idp
- cat <<EOF > ${nginx_prefix}/conf/nginx.conf
-events {}
-http {
-    lua_package_path '\$prefix/lua/?.lua;;';
-    server {
-        listen       ${NGINX_PORT};
-        location /id_provider/ {
-            alias ../idp/;
-        }
-        location / {
-            set \$idp_loc '/id_provider';
-            set \$redis_host 127.0.0.1;
-            set \$redis_port ${REDIS_PORT};
-            access_by_lua_file lua/test/id_provider_location_db.lua;
-        }
-    }
-}
-EOF
- ${NGINX_DIR}/sbin/nginx -p ${nginx_prefix} -s reload
- sleep ${INTERVAL}
-
- result=$(curl -o out -s -w "%{http_code}" http://localhost:${NGINX_PORT})
- if [ "${result}" != "200" ]; then
-     echo ${result} 1>&2
-     cat out 1>&2
-     exit 1
- fi
- echo "===== id provider location database passed ====="
-
-
- # ############################################################
- cat <<EOF > ${nginx_prefix}/conf/nginx.conf
-events {}
-http {
-    lua_package_path '\$prefix/lua/?.lua;;';
-    server {
-        listen       ${NGINX_PORT};
-        location / {
-            access_by_lua_file lua/test/ta_session.lua;
-        }
-    }
-}
-EOF
- ${NGINX_DIR}/sbin/nginx -p ${nginx_prefix} -s reload
- sleep ${INTERVAL}
-
- result=$(curl -o out -s -w "%{http_code}" http://localhost:${NGINX_PORT})
- if [ "${result}" != "200" ]; then
-     echo ${result} 1>&2
-     cat out 1>&2
-     exit 1
- fi
- echo "===== TA session passed ====="
-
-
- # ############################################################
- ${REDIS_CLIENT} -p ${REDIS_PORT} flushall > /dev/null
- cat <<EOF > ${nginx_prefix}/conf/nginx.conf
-events {}
-http {
-    lua_package_path '\$prefix/lua/?.lua;;';
-    server {
-        listen       ${NGINX_PORT};
-        location / {
-            set \$redis_host 127.0.0.1;
-            set \$redis_port ${REDIS_PORT};
-            access_by_lua_file lua/test/ta_session_db.lua;
-        }
-    }
-}
-EOF
- ${NGINX_DIR}/sbin/nginx -p ${nginx_prefix} -s reload
- sleep ${INTERVAL}
-
- result=$(curl -o out -s -w "%{http_code}" http://localhost:${NGINX_PORT})
- if [ "${result}" != "200" ]; then
-     echo ${result} 1>&2
-     cat out 1>&2
-     exit 1
- fi
- echo "===== TA session database passed ====="
-
 )
 
 echo "===== all test passed ====="

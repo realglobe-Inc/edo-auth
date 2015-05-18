@@ -12,7 +12,7 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-local redis = require("lib.redis")
+local redis_wrapper = require("lib.redis_wrapper")
 local test = require("test.test")
 local tutil = require("lib.table")
 local session = require("lib.user_session")
@@ -23,28 +23,20 @@ local session_db = require("lib.user_session_db")
 -- redis_port: redis のポート番号。
 -- 成功したら 200 OK を返す。
 
-local client, err = redis.new(ngx.var.redis_host, ngx.var.redis_port, 1000, 10 * 1000, 16)
+local client, err = redis_wrapper.new(ngx.var.redis_host, ngx.var.redis_port, 1000, 10 * 1000, 16)
 if err then
-   return test.response_error("redis.new failed: " .. err)
+   return test.response_error("redis_wrapper.new failed: " .. err)
 end
-local prefix = "edo-auth.user-session:"
+local prefix = "edo-auth.usession:"
 local db, err = session_db.new_redis(client, prefix)
 if err then
    return test.response_error("new failed: " .. err)
 end
 
 
-local sess = session.new("MLWlc1ICtzbpvKS6ML7EHPYrP2QWM4", ngx.time() + 24 * 3600)
-sess:set_access_token(session.new_access_token("UhotYNPpXV2gw_4T4aTPRdEeZ1M7C3", "jWBVWDzXJU", ngx.time() + 3600))
-sess:set_account({
-      ["iss"] = "http://idp.example.org",
-      ["sub"] = "KR1QiTN7swN17ga4",
-})
-sess:set_request("/ui/index.html")
-sess:set_state("ZhcgfcW7VB")
-sess:set_nonce("iqus5DRs3H")
+local sess = session.new("MLWlc1ICtzbpvKS6ML7EHPYrP2QWM4", "eyJhbGciOiJSUzI1NiIsImtpZCI6IjFlOWdkazcifQ.ewogImlzcyI6ICJodHRwOi8vc2VydmVyLmV4YW1wbGUuY29tIiwKICJzdWIiOiAiMjQ4Mjg5NzYxMDAxIiwKICJhdWQiOiAiczZCaGRSa3F0MyIsCiAibm9uY2UiOiAibi0wUzZfV3pBMk1qIiwKICJleHAiOiAxMzExMjgxOTcwLAogImlhdCI6IDEzMTEyODA5NzAKfQ.ggW8hZ1EuVLuxNuuIJKX_V8a_OMXzR0EHR9R6jgdqrOOF4daGU96Sr_P6qJp6IcmD3HP99Obi1PRs-cwh3LO-p146waJ8IhehcwL7F09JdijmBqkvPeB2T9CJNqeGpe-gccMg4vfKjkM8FcGvnzZUN4_KSP0aAp1tOJ1zZwgjxqGByKHiOtX7TpdQyHE5lcMiKPXfEIQILVq0pc_E2DzL7emopWoaoZTF_m0_N0YzFC6g6EJbOEoRoSK5hoDalrcvRYLSrQAZZKflyuVCyixEoV9GfNQC3_osjzw2PAithfubEEBLuVVk4XUVrWOLrLl0nx7RkKU8NXNHq-rvKMzqg")
 
-local err = db:save(sess)
+local err = db:save(sess, 10)
 if err then
    return test.response_error("save failed: " .. err)
 end
