@@ -20,11 +20,15 @@ import (
 	keydb "github.com/realglobe-Inc/edo-id-provider/database/key"
 	idpdb "github.com/realglobe-Inc/edo-idp-selector/database/idp"
 	webdb "github.com/realglobe-Inc/edo-idp-selector/database/web"
+	idperr "github.com/realglobe-Inc/edo-idp-selector/error"
+	"github.com/realglobe-Inc/edo-idp-selector/request"
 	"github.com/realglobe-Inc/edo-lib/driver"
 	logutil "github.com/realglobe-Inc/edo-lib/log"
 	"github.com/realglobe-Inc/edo-lib/server"
 	"github.com/realglobe-Inc/go-lib/erro"
 	"github.com/realglobe-Inc/go-lib/rglog"
+	"github.com/realglobe-Inc/go-lib/rglog/level"
+	"html/template"
 	"net/http"
 	"os"
 	"strings"
@@ -37,7 +41,6 @@ func main() {
 			os.Exit(exitCode)
 		}
 	}()
-
 	defer rglog.Flush()
 
 	logutil.InitConsole("github.com/realglobe-Inc")
@@ -143,14 +146,23 @@ func serve(param *parameters) (err error) {
 		return erro.New("invalid access token DB type " + param.tokDbType)
 	}
 
+	var errTmpl *template.Template
+	if param.tmplErr != "" {
+		errTmpl, err = template.ParseFiles(param.tmplErr)
+		if err != nil {
+			return erro.Wrap(err)
+		}
+	}
+
 	sys := &system{
 		param.taId,
 		param.rediUri,
 		param.sigAlg,
 		param.sigKid,
 
-		param.pathErrUi,
+		errTmpl,
 
+		param.usessLabel,
 		param.usessLen,
 		param.authExpIn,
 		param.usessExpIn,
@@ -186,13 +198,13 @@ func serve(param *parameters) (err error) {
 
 	mux := http.NewServeMux()
 	routes := map[string]bool{}
-	mux.HandleFunc(param.pathOk, panicErrorWrapper(s, func(w http.ResponseWriter, r *http.Request) error {
+	mux.HandleFunc(param.pathOk, pagePanicErrorWrapper(s, errTmpl, func(w http.ResponseWriter, r *http.Request) error {
 		return nil
 	}))
 	routes[param.pathOk] = true
-	mux.HandleFunc(param.pathAuth, panicErrorWrapper(s, sys.authPage))
+	mux.HandleFunc(param.pathAuth, pagePanicErrorWrapper(s, errTmpl, sys.authPage))
 	routes[param.pathAuth] = true
-	mux.HandleFunc(param.pathCb, panicErrorWrapper(s, sys.callbackPage))
+	mux.HandleFunc(param.pathCb, pagePanicErrorWrapper(s, errTmpl, sys.callbackPage))
 	routes[param.pathCb] = true
 	if param.uiDir != "" {
 		// ファイル配信も自前でやる。
@@ -202,10 +214,58 @@ func serve(param *parameters) (err error) {
 	}
 
 	if !routes["/"] {
-		mux.HandleFunc("/", panicErrorWrapper(s, func(w http.ResponseWriter, r *http.Request) error {
+		mux.HandleFunc("/", pagePanicErrorWrapper(s, errTmpl, func(w http.ResponseWriter, r *http.Request) error {
 			return erro.Wrap(server.NewError(http.StatusNotFound, "invalid endpoint", nil))
 		}))
 	}
 
 	return server.Serve(param, mux)
+}
+
+func pagePanicErrorWrapper(s *server.Stopper, errTmpl *template.Template, f server.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		s.Stop()
+		defer s.Unstop()
+
+		// panic時にプロセス終了しないようにrecoverする
+		defer func() {
+			if rcv := recover(); rcv != nil {
+				server.RespondPageError(w, r, erro.New(rcv), errTmpl, request.Parse(r, "").String()+": ")
+				return
+			}
+		}()
+
+		//////////////////////////////
+		server.LogRequest(level.DEBUG, r, true)
+		//////////////////////////////
+
+		if err := f(w, r); err != nil {
+			server.RespondPageError(w, r, erro.Wrap(err), errTmpl, request.Parse(r, "").String()+": ")
+			return
+		}
+	}
+}
+
+func apiPanicErrorWrapper(s *server.Stopper, f server.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		s.Stop()
+		defer s.Unstop()
+
+		// panic時にプロセス終了しないようにrecoverする
+		defer func() {
+			if rcv := recover(); rcv != nil {
+				idperr.RespondApiError(w, r, erro.New(rcv), request.Parse(r, ""))
+				return
+			}
+		}()
+
+		//////////////////////////////
+		server.LogRequest(level.DEBUG, r, true)
+		//////////////////////////////
+
+		if err := f(w, r); err != nil {
+			idperr.RespondApiError(w, r, erro.Wrap(err), request.Parse(r, ""))
+			return
+		}
+	}
 }

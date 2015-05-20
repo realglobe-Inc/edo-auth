@@ -27,37 +27,37 @@ import (
 
 // ユーザー情報。
 func (sys *system) callbackPage(w http.ResponseWriter, r *http.Request) (err error) {
-	req := request.Parse(r, tagAuth_user)
-	log.Info(req, ": Received callback request")
-	defer log.Info(req, ": Handled callback request")
+	sender := request.Parse(r, sys.usessLabel)
+	log.Info(sender, ": Received callback request")
+	defer log.Info(sender, ": Handled callback request")
 
-	if req.Session() == "" {
-		return sys.responseError(w, r, erro.Wrap(server.NewError(http.StatusBadRequest, "no session ", nil)), req)
-	}
-
-	sess, err := sys.usessDb.Get(req.Session())
-	if err != nil {
-		return sys.responseError(w, r, erro.Wrap(err), req)
-	} else if sess == nil {
-		return sys.responseError(w, r, erro.Wrap(server.NewError(http.StatusBadRequest, "declared user session is not exist", nil)), req)
-	}
-	log.Debug(req, ": Declared user session is exist")
-
-	savedDate := sess.Date()
-	sess.Invalidate()
-	if ok, err := sys.usessDb.Replace(sess, savedDate); err != nil {
-		return sys.responseError(w, r, erro.Wrap(err), req)
-	} else if !ok {
-		return sys.responseError(w, r, erro.Wrap(server.NewError(http.StatusBadRequest, "reused user session", nil)), req)
-	}
-
-	if err := sys.callbackServe(w, r, req, sess); err != nil {
-		return sys.responseError(w, r, erro.Wrap(err), req)
+	if err := sys.callbackServe(w, r, sender); err != nil {
+		return server.RespondPageError(w, r, erro.Wrap(err), sys.errTmpl, sender.String()+": ")
 	}
 	return nil
 }
 
-func (sys *system) callbackServe(w http.ResponseWriter, r *http.Request, sender *request.Request, sess *usession.Element) error {
+func (sys *system) callbackServe(w http.ResponseWriter, r *http.Request, sender *request.Request) error {
+	if sender.Session() == "" {
+		return erro.Wrap(server.NewError(http.StatusBadRequest, "no session ", nil))
+	}
+
+	sess, err := sys.usessDb.Get(sender.Session())
+	if err != nil {
+		return erro.Wrap(err)
+	} else if sess == nil {
+		return erro.Wrap(server.NewError(http.StatusBadRequest, "declared user session is not exist", nil))
+	}
+	log.Debug(sender, ": Declared user session is exist")
+
+	savedDate := sess.Date()
+	sess.Invalidate()
+	if ok, err := sys.usessDb.Replace(sess, savedDate); err != nil {
+		return erro.Wrap(err)
+	} else if !ok {
+		return erro.Wrap(server.NewError(http.StatusBadRequest, "reused user session", nil))
+	}
+
 	req, err := parseCallbackRequest(r, sender)
 	if err != nil {
 		return erro.Wrap(server.NewError(http.StatusBadRequest, erro.Unwrap(err).Error(), err))
