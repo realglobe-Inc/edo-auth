@@ -16,7 +16,7 @@ package main
 
 import (
 	"github.com/realglobe-Inc/edo-auth/database/usession"
-	"github.com/realglobe-Inc/edo-id-provider/request"
+	"github.com/realglobe-Inc/edo-idp-selector/request"
 	"github.com/realglobe-Inc/edo-lib/server"
 	"github.com/realglobe-Inc/go-lib/erro"
 	"net/http"
@@ -25,12 +25,12 @@ import (
 
 // ユーザー認証開始。
 func (sys *system) authPage(w http.ResponseWriter, r *http.Request) error {
-	req := request.Parse(r, tagAuth_user)
-	log.Info(req, ": Received authentication request")
-	defer log.Info(req, ": Handled authentication request")
+	sender := request.Parse(r, sys.usessLabel)
+	log.Info(sender, ": Received authentication request")
+	defer log.Info(sender, ": Handled authentication request")
 
-	if err := sys.authServe(w, r, req); err != nil {
-		return sys.responseError(w, r, erro.Wrap(err), req)
+	if err := sys.authServe(w, r, sender); err != nil {
+		return server.RespondPageError(w, r, erro.Wrap(err), sys.errTmpl, sender.String()+": ")
 	}
 	return nil
 }

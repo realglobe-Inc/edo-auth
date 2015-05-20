@@ -63,12 +63,14 @@ type parameters struct {
 	pathAuth string
 	pathCb   string
 	// UI 用 HTML を提供する URI。
-	pathUi    string
-	pathErrUi string
+	pathUi string
 	// UI 用 HTML を置くディレクトリパス。
 	uiDir string
 
+	tmplErr string
+
 	// ユーザーセッション。
+	usessLabel   string
 	usessLen     int
 	authExpIn    time.Duration
 	usessExpIn   time.Duration
@@ -166,9 +168,11 @@ func parseParameters(args ...string) (param *parameters, err error) {
 	flags.StringVar(&param.pathAuth, "pathAuth", "/", "Authnetication URI")
 	flags.StringVar(&param.pathCb, "pathCb", "/callback", "Callback URI")
 	flags.StringVar(&param.pathUi, "pathUi", "/ui", "UI URI")
-	flags.StringVar(&param.pathErrUi, "pathErrUi", "/ui/error.html", "Error UI URI")
-	flags.StringVar(&param.uiDir, "uiDir", filepath.Join(filepath.Dir(os.Args[0]), "html"), "UI file directory")
+	flags.StringVar(&param.uiDir, "uiDir", "", "UI file directory")
 
+	flags.StringVar(&param.tmplErr, "tmplErr", "", "Error UI template")
+
+	flags.StringVar(&param.usessLabel, "usessLabel", "Auth-User", "User session ID label")
 	flags.IntVar(&param.usessLen, "usessLen", 30, "User session ID length")
 	flags.DurationVar(&param.authExpIn, "authExpIn", 30*time.Minute, "User authentication expiration duration")
 	flags.DurationVar(&param.usessExpIn, "usessExpIn", 7*24*time.Hour, "User session expiration duration")

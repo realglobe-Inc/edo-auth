@@ -20,73 +20,60 @@ const (
 	// コンパイル時に打ち間違いに気付けるように。
 	// それ以上の意味は無い。
 
-	// HTTP ヘッダ。
+	// アンダースコア。
+	tagAlg                    = "alg"
+	tagAmr                    = "amr"
+	tagAt_exp                 = "at_exp"
+	tagAt_hash                = "at_hash"
+	tagAt_tag                 = "at_tag"
+	tagAud                    = "aud"
+	tagAuthorization_code     = "authorization_code"
+	tagAuthorization_endpoint = "authorization_endpoint"
+	tagAzp                    = "azp"
+	tagC_hash                 = "c_hash"
+	tagClient_assertion       = "client_assertion"
+	tagClient_assertion_type  = "client_assertion_type"
+	tagClient_id              = "client_id"
+	tagCode                   = "code"
+	tagDetail                 = "detail"
+	tagExp                    = "exp"
+	tagGrant_type             = "grant_type"
+	tagIat                    = "iat"
+	tagId_token               = "id_token"
+	tagIss                    = "iss"
+	tagJti                    = "jti"
+	tagMessage                = "message"
+	tagNbf                    = "nbf"
+	tagNonce                  = "nonce"
+	tagNone                   = "none"
+	tagOpenid                 = "openid"
+	tagRedirect_uri           = "redirect_uri"
+	tagResponse_type          = "response_type"
+	tagScope                  = "scope"
+	tagState                  = "state"
+	tagStatus                 = "status"
+	tagSub                    = "sub"
+	tagTyp                    = "typ"
+
+	// ハイフン。
+	tagNo_cache = "no-cache"
+	tagNo_store = "no-store"
+
+	// 頭大文字、ハイフン。
 	tagAuthorization             = "Authorization"
+	tagBearer                    = "Bearer"
 	tagCache_control             = "Cache-Control"
 	tagContent_length            = "Content-Length"
 	tagContent_type              = "Content-Type"
 	tagPragma                    = "Pragma"
 	tagX_auth_authentication_uri = "X-Auth-Authentication-Uri"
 	tagX_auth_user               = "X-Auth-User"
-
-	// HTTP ヘッダ値。
-	tagBearer   = "Bearer"
-	tagNo_cache = "no-cache"
-	tagNo_store = "no-store"
-
-	// HTTP フォーム。
-	tagClient_assertion      = "client_assertion"
-	tagClient_assertion_type = "client_assertion_type"
-	tagClient_id             = "client_id"
-	tagCode                  = "code"
-	tagGrant_type            = "grant_type"
-	tagNonce                 = "nonce"
-	tagRedirect_uri          = "redirect_uri"
-	tagResponse_type         = "response_type"
-	tagScope                 = "scope"
-	tagState                 = "state"
-
-	tagStatus  = "status"
-	tagMessage = "message"
-	tagDetail  = "detail"
-
-	// パラメータ値。
-	tagAuthorization_code = "authorization_code"
-	//tagCode = "code"
-	tagId_token = "id_token"
-	tagOpenid   = "openid"
-
-	// JWT ヘッダ。
-	tagAlg = "alg"
-
-	// JWT ヘッダ値。
-	tagNone = "none"
-
-	// JWT クレーム。
-	tagAmr     = "amr"
-	tagAt_hash = "at_hash"
-	tagAud     = "aud"
-	tagAzp     = "azp"
-	tagC_hash  = "c_hash"
-	tagExp     = "exp"
-	tagIat     = "iat"
-	tagIss     = "iss"
-	tagJti     = "jti"
-	tagNbf     = "nbf"
-	//tagNonce = "nonce"
-	tagSub = "sub"
-	tagTyp = "typ"
-
-	tagAt_exp = "at_exp"
-	tagAt_tag = "at_tag"
-
-	// ID プロバイダ属性。
-	tagAuthorization_endpoint = "authorization_endpoint"
-
-	// セッション。
-	tagAuth_user = "Auth-User"
 )
 
 const (
 	cliAssTypeJwt_bearer = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+)
+
+const (
+	contTypeForm = "application/x-www-form-urlencoded"
 )

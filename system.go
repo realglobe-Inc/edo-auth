@@ -19,13 +19,13 @@ import (
 	"github.com/realglobe-Inc/edo-auth/database/token"
 	"github.com/realglobe-Inc/edo-auth/database/usession"
 	keydb "github.com/realglobe-Inc/edo-id-provider/database/key"
-	"github.com/realglobe-Inc/edo-id-provider/request"
 	idpdb "github.com/realglobe-Inc/edo-idp-selector/database/idp"
 	webdb "github.com/realglobe-Inc/edo-idp-selector/database/web"
 	"github.com/realglobe-Inc/edo-lib/jwt"
 	"github.com/realglobe-Inc/edo-lib/server"
 	"github.com/realglobe-Inc/go-lib/erro"
 	"github.com/realglobe-Inc/go-lib/rglog/level"
+	"html/template"
 	"net/http"
 	"net/url"
 	"strings"
@@ -38,8 +38,9 @@ type system struct {
 	sigAlg  string
 	sigKid  string
 
-	pathErrUi string
+	errTmpl *template.Template
 
+	usessLabel   string
 	usessLen     int
 	authExpIn    time.Duration
 	usessExpIn   time.Duration
@@ -61,24 +62,9 @@ type system struct {
 	cookSec  bool
 }
 
-// ユーザーエージェント向けにエラーを返す。
-func (sys *system) responseError(w http.ResponseWriter, r *http.Request, origErr error, sender *request.Request) error {
-	if sys.pathErrUi != "" {
-		uri, err := url.Parse(sys.pathErrUi)
-		if err == nil {
-			redirectError(w, r, origErr, sender, uri)
-			return nil
-		}
-		log.Err(sender, ": ", erro.Wrap(err))
-	}
-
-	responseError(w, origErr, sender)
-	return nil
-}
-
 func (sys *system) newUserCookie(sess *usession.Element) *http.Cookie {
 	return &http.Cookie{
-		Name:     tagAuth_user,
+		Name:     sys.usessLabel,
 		Value:    sess.Id(),
 		Path:     sys.cookPath,
 		Expires:  sess.Expires(),
@@ -128,7 +114,7 @@ func (sys *system) getAccessToken(req *callbackRequest, idp idpdb.Element, sess 
 	if err != nil {
 		return nil, nil, erro.Wrap(err)
 	}
-	tokReq.Header.Set(tagContent_type, server.ContentTypeForm)
+	tokReq.Header.Set(tagContent_type, contTypeForm)
 
 	server.LogRequest(level.DEBUG, tokReq, true)
 	resp, err := (&http.Client{}).Do(tokReq)
