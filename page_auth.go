@@ -16,7 +16,7 @@ package main
 
 import (
 	"github.com/realglobe-Inc/edo-auth/database/usession"
-	"github.com/realglobe-Inc/edo-id-provider/request"
+	"github.com/realglobe-Inc/edo-idp-selector/request"
 	"github.com/realglobe-Inc/edo-lib/server"
 	"github.com/realglobe-Inc/go-lib/erro"
 	"net/http"
