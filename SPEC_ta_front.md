@@ -15,7 +15,7 @@ limitations under the License.
 -->
 
 
-# edo-auth TA の仕様（目標）
+# edo-auth TA フロントエンドの仕様（目標）
 
 以降の動作記述において、箇条書きに以下の構造を持たせることがある。
 
@@ -29,31 +29,30 @@ limitations under the License.
 ## 1. 概要
 
 1. 仲介コードと共にリクエストを受け取る。
-2. 全ての仲介コードについて次の 1, 2 を行う。
-    1. 仲介コードを発行した IdP に、仲介コードを送る。
-    2. IdP から、仲介情報を受け取る。
-3. リクエストに仲介情報を付加して通す。
-4. レスポンスを受け取る。
-4. レスポンスを転送する。
+2. 仲介コードを edo-auth バックエンドに渡す。
+3. edo-auth バックエンドから仲介情報を受け取る。
+4. リクエストに仲介情報を付加してバックエンドに通す。
+5. バックエンドからレスポンスを受け取る。
+6. レスポンスを転送する。
 
 ```
-+--------+                                    +--------+
-|        |--------(1) request + codes-------->|        |
-|        |                                    |        |
-|        |    +--------+                      |        |
-|        |    |        |<---(2-1) code--------|        |
-|        |    |  IdP   |                      |        |
-|        |    |        |----(2-2) userinfo--->|        |
-|        |    +--------+                      |  edo   |
-|   TA   |       ...                          |  auth  |
-|        |                                    |  TA    |
-|        |                                    |        |                    +--------+
-|        |                                    |        |----(3) request---->|        |
-|        |                                    |        |        +usrinfo    |        |
-|        |                                    |        |                    |        |
-|        |                                    |        |<---(4) response----|        |
-|        |<-------(5) response----------------|        |                    +--------+
-+--------+                                    +--------+
++--------+                           +--------+
+|        |----(1) request + codes--->|        |                    +--------+
+|        |                           |        |----(2) codes------>|edo auth|
+|        |                           |        |                    |TA      |
+|        |                           |        |                    |backend |
+|        |                           |        |----(3) userinfo--->|        |
+|        |                           |        |                    +--------+
+|        |                           |edo auth|
+|   TA   |                           |TA      |
+|        |                           |frontend|
+|        |                           |        |                    +--------+
+|        |                           |        |----(4) request---->|        |
+|        |                           |        |        +usrinfo    |backend |
+|        |                           |        |                    |        |
+|        |                           |        |<---(5) response----|        |
+|        |<---(6) response-----------|        |                    +--------+
++--------+                           +--------+
 ```
 
 
@@ -67,28 +66,25 @@ limitations under the License.
     * そうでなければ、
         * エラーを返す。
 * そうでなく、仲介コードが付加されている場合、
-    * 仲介コードに問題が無い場合、
-        * IdP への仲介リクエストへ。
-    * そうでなければ、
-        * エラーを返す。
+    * edo-auth バックエンドへ仲介コードを送る。
 * そうでなければ、エラーを返す。
 
 
-## 3. IdP への仲介リクエスト
+## 3. edo-auth バックエンドへの仲介コードの送信
 
-[TA 間連携プロトコル]を参照のこと。
+受け取った形式のまま送る。
 
 
-## 4. IdP からの仲介情報受け取り
+## 4. edo-auth バックエンドからの仲介情報の受信
 
-[TA 間連携プロトコル]を参照のこと。
+edo-auth バックエンドを参照のこと。
 
-1 つでもエラーであれば、エラーを返す。
+セッションが通知されたら、セッションと仲介情報を紐付けて保存する。
 
 
 ## 5. リクエストの転送
 
-リクエストから仲介コードや Cookie の Edo-Cooperation を削除する。
+リクエストから仲介コードやセッション宣言を削除する。
 以下の HTTP ヘッダにて仲介情報を付加する。
 
 * X-Auth-User
@@ -136,9 +132,9 @@ X-Auth-User: eyJhbGciOiJub25lIn0.eyJhdF9leHAiOjE0MjY1NjEyNjIsImF0X3RhZyI6InVudG5
     ZHhOMDMiLCJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLm9yZyIsInN1YiI6Ijc1NUI2MjkyMDhF
     REZEQzIifQ.
 X-Auth-User-Tag: reader
+X-Auth-Ta: https://from.example.org
 X-Auth-Related-Users: eyJhbGciOiJub25lIn0.eyJ3cml0ZXIiOnsiaXNzIjoiaHR0cHM6Ly9pZHA
     uZXhhbXBsZS5vcmciLCJzdWIiOiJENUNGM0Y0OUU1RTczMUMzIn19.
-X-Auth-Ta: https://from.example.org
 ```
 
 JWT の改行とインデントは表示の都合による。
@@ -194,34 +190,6 @@ X-Auth-Related-Users のクレームセットは、
 
 
 ### 9.1. 共有データ
-
-
-#### 9.1.1. IdP 情報
-
-以下を含む。
-
-* ID
-* 検証鍵
-* 要請先仲介エンドポイント
-
-以下の操作が必要。
-
-* ID による取得
-
-
-#### 9.1.2. アクセストークン
-
-以下を含む。
-
-* ID
-* タグ
-* 有効期限
-* 発行 IdP の ID
-* 許可スコープ
-
-以下の操作が必要。
-
-* 保存
 
 
 ### 9.2. 非共有データ
