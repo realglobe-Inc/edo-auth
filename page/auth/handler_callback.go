@@ -12,37 +12,56 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package auth
 
 import (
-	"github.com/realglobe-Inc/edo-auth/database/usession"
 	idpdb "github.com/realglobe-Inc/edo-idp-selector/database/idp"
 	"github.com/realglobe-Inc/edo-idp-selector/request"
 	"github.com/realglobe-Inc/edo-lib/jwt"
 	"github.com/realglobe-Inc/edo-lib/server"
 	"github.com/realglobe-Inc/go-lib/erro"
+	"github.com/realglobe-Inc/go-lib/rglog/level"
 	"net/http"
 	"time"
 )
 
-// ユーザー情報。
-func (sys *system) callbackPage(w http.ResponseWriter, r *http.Request) (err error) {
-	sender := request.Parse(r, sys.usessLabel)
+func (this *Page) HandleCallback(w http.ResponseWriter, r *http.Request) {
+	var sender *request.Request
+
+	// panic 対策。
+	defer func() {
+		if rcv := recover(); rcv != nil {
+			server.RespondPageError(w, r, erro.New(rcv), this.errTmpl, sender.String()+": ")
+			return
+		}
+	}()
+
+	if this.stopper != nil {
+		this.stopper.Stop()
+		defer this.stopper.Unstop()
+	}
+
+	//////////////////////////////
+	server.LogRequest(level.DEBUG, r, true)
+	//////////////////////////////
+
+	sender = request.Parse(r, this.sessLabel)
 	log.Info(sender, ": Received callback request")
 	defer log.Info(sender, ": Handled callback request")
 
-	if err := sys.callbackServe(w, r, sender); err != nil {
-		return server.RespondPageError(w, r, erro.Wrap(err), sys.errTmpl, sender.String()+": ")
+	if err := this.callbackServe(w, r, sender); err != nil {
+		server.RespondPageError(w, r, erro.Wrap(err), this.errTmpl, sender.String()+": ")
+		return
 	}
-	return nil
+	return
 }
 
-func (sys *system) callbackServe(w http.ResponseWriter, r *http.Request, sender *request.Request) error {
+func (this *Page) callbackServe(w http.ResponseWriter, r *http.Request, sender *request.Request) error {
 	if sender.Session() == "" {
 		return erro.Wrap(server.NewError(http.StatusBadRequest, "no session ", nil))
 	}
 
-	sess, err := sys.usessDb.Get(sender.Session())
+	sess, err := this.sessDb.Get(sender.Session())
 	if err != nil {
 		return erro.Wrap(err)
 	} else if sess == nil {
@@ -52,7 +71,7 @@ func (sys *system) callbackServe(w http.ResponseWriter, r *http.Request, sender 
 
 	savedDate := sess.Date()
 	sess.Invalidate()
-	if ok, err := sys.usessDb.Replace(sess, savedDate); err != nil {
+	if ok, err := this.sessDb.Replace(sess, savedDate); err != nil {
 		return erro.Wrap(err)
 	} else if !ok {
 		return erro.Wrap(server.NewError(http.StatusBadRequest, "reused user session", nil))
@@ -73,7 +92,7 @@ func (sys *system) callbackServe(w http.ResponseWriter, r *http.Request, sender 
 	var attrs1 map[string]interface{}
 
 	if sess.IdProvider() != "" {
-		idp, err = sys.idpDb.Get(sess.IdProvider())
+		idp, err = this.idpDb.Get(sess.IdProvider())
 		if err != nil {
 			return erro.Wrap(err)
 		} else if idp == nil {
@@ -86,7 +105,7 @@ func (sys *system) callbackServe(w http.ResponseWriter, r *http.Request, sender 
 			return erro.Wrap(server.NewError(http.StatusBadRequest, erro.Unwrap(err).Error(), err))
 		}
 
-		idp, err = sys.idpDb.Get(idTok.idProvider())
+		idp, err = this.idpDb.Get(idTok.idProvider())
 		if err != nil {
 			return erro.Wrap(err)
 		} else if idp == nil {
@@ -106,18 +125,16 @@ func (sys *system) callbackServe(w http.ResponseWriter, r *http.Request, sender 
 	}
 
 	// アクセストークンを取得する。
-	tok, idTok, err := sys.getAccessToken(req, idp, sess)
+	tok, idTok, err := this.getAccessToken(req, idp, sess)
 	if err != nil {
 		return erro.Wrap(err)
 	}
-	log.Debug(req, ": Got access token "+mosaic(tok.Id()))
 
 	// アカウント情報を取得する。
-	attrs2, err := sys.getAccountInfo(req, tok, idp, sess)
+	attrs2, err := this.getAccountInfo(req, tok, idp, sess)
 	if err != nil {
 		return erro.Wrap(err)
 	}
-	log.Debug(req, ": Got account info")
 
 	// アカウント情報をまとめる。
 	jt := jwt.New()
@@ -135,18 +152,12 @@ func (sys *system) callbackServe(w http.ResponseWriter, r *http.Request, sender 
 	}
 
 	// フロントエンドのためにセッション期限を延長する。
-	sess2 := usession.New(
-		sess.Id(),
-		time.Now().Add(sys.usessExpIn),
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-	)
-	log.Info(req, ": Rescheduled user session "+mosaic(sess2.Id()))
-	http.SetCookie(w, sys.newUserCookie(sess2))
+	now := time.Now()
+	http.SetCookie(w, this.newCookie(sess.Id(), now.Add(-time.Second)))
+	http.SetCookie(w, this.newFrontCookie(this.idGen.String(this.fsessLen), now.Add(this.fsessExpIn)))
+	log.Info(req, ": Upgrade user session to frontend session")
+
+	// フロントエンドが使うので保存しなくて良い。
 
 	w.Header().Add(tagX_auth_user, string(buff))
 	w.Header().Add(tagCache_control, tagNo_store)

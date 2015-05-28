@@ -12,30 +12,52 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package auth
 
 import (
 	"github.com/realglobe-Inc/edo-auth/database/usession"
 	"github.com/realglobe-Inc/edo-idp-selector/request"
+	logutil "github.com/realglobe-Inc/edo-lib/log"
 	"github.com/realglobe-Inc/edo-lib/server"
 	"github.com/realglobe-Inc/go-lib/erro"
+	"github.com/realglobe-Inc/go-lib/rglog/level"
 	"net/http"
 	"time"
 )
 
 // ユーザー認証開始。
-func (sys *system) authPage(w http.ResponseWriter, r *http.Request) error {
-	sender := request.Parse(r, sys.usessLabel)
+func (this *Page) HandleAuth(w http.ResponseWriter, r *http.Request) {
+	var sender *request.Request
+
+	// panic 対策。
+	defer func() {
+		if rcv := recover(); rcv != nil {
+			server.RespondPageError(w, r, erro.New(rcv), this.errTmpl, sender.String()+": ")
+			return
+		}
+	}()
+
+	if this.stopper != nil {
+		this.stopper.Stop()
+		defer this.stopper.Unstop()
+	}
+
+	//////////////////////////////
+	server.LogRequest(level.DEBUG, r, true)
+	//////////////////////////////
+
+	sender = request.Parse(r, this.sessLabel)
 	log.Info(sender, ": Received authentication request")
 	defer log.Info(sender, ": Handled authentication request")
 
-	if err := sys.authServe(w, r, sender); err != nil {
-		return server.RespondPageError(w, r, erro.Wrap(err), sys.errTmpl, sender.String()+": ")
+	if err := this.authServe(w, r, sender); err != nil {
+		server.RespondPageError(w, r, erro.Wrap(err), this.errTmpl, sender.String()+": ")
+		return
 	}
-	return nil
+	return
 }
 
-func (sys *system) authServe(w http.ResponseWriter, r *http.Request, sender *request.Request) error {
+func (this *Page) authServe(w http.ResponseWriter, r *http.Request, sender *request.Request) error {
 	req, err := parseAuthRequest(r, sender)
 	if err != nil {
 		return erro.Wrap(server.NewError(http.StatusBadRequest, erro.Unwrap(err).Error(), err))
@@ -50,7 +72,7 @@ func (sys *system) authServe(w http.ResponseWriter, r *http.Request, sender *req
 	var idp string
 	respType := map[string]bool{tagCode: true}
 	rawAuthUri := authUri.Scheme + "://" + authUri.Host + authUri.Path
-	if idps, err := sys.idpDb.Search(map[string]string{
+	if idps, err := this.idpDb.Search(map[string]string{
 		tagAuthorization_endpoint: "^" + rawAuthUri + "$",
 	}); err != nil {
 		return erro.Wrap(err)
@@ -74,7 +96,7 @@ func (sys *system) authServe(w http.ResponseWriter, r *http.Request, sender *req
 	// client_id
 	ta := queries.Get(tagClient_id)
 	if ta == "" {
-		ta = sys.taId
+		ta = this.selfId
 		queries.Set(tagClient_id, ta)
 		log.Debug(req, ": Act as default TA "+ta)
 	} else {
@@ -84,7 +106,7 @@ func (sys *system) authServe(w http.ResponseWriter, r *http.Request, sender *req
 	// redirect_uri
 	rediUri := queries.Get(tagRedirect_uri)
 	if rediUri == "" {
-		rediUri = sys.rediUri
+		rediUri = this.rediUri
 		queries.Set(tagRedirect_uri, rediUri)
 		log.Debug(req, ": Use default redirect uri "+rediUri)
 	} else {
@@ -92,20 +114,20 @@ func (sys *system) authServe(w http.ResponseWriter, r *http.Request, sender *req
 	}
 
 	// state
-	stat := randomString(sys.statLen)
+	stat := this.idGen.String(this.statLen)
 	queries.Set(tagState, stat)
-	log.Debug(req, ": Use state "+mosaic(stat))
+	log.Debug(req, ": Use state "+logutil.Mosaic(stat))
 
 	// nonce
-	nonc := randomString(sys.noncLen)
+	nonc := this.idGen.String(this.noncLen)
 	queries.Set(tagNonce, nonc)
-	log.Debug(req, ": Use nonce "+mosaic(nonc))
+	log.Debug(req, ": Use nonce "+logutil.Mosaic(nonc))
 
 	authUri.RawQuery = queries.Encode()
 
 	sess := usession.New(
-		randomString(sys.usessLen),
-		time.Now().Add(sys.authExpIn),
+		this.idGen.String(this.sessLen),
+		time.Now().Add(this.sessExpIn),
 		req.path(),
 		idp,
 		ta,
@@ -113,12 +135,12 @@ func (sys *system) authServe(w http.ResponseWriter, r *http.Request, sender *req
 		stat,
 		nonc,
 	)
-	if err := sys.usessDb.Save(sess, sess.Expires().Add(sys.usessDbExpIn-sys.usessExpIn)); err != nil {
+	if err := this.sessDb.Save(sess, sess.Expires().Add(this.sessDbExpIn-this.sessExpIn)); err != nil {
 		return erro.Wrap(err)
 	}
-	log.Info(req, ": Generated user session "+mosaic(sess.Id()))
+	log.Info(req, ": Generated user session "+logutil.Mosaic(sess.Id()))
 
-	http.SetCookie(w, sys.newUserCookie(sess))
+	http.SetCookie(w, this.newCookie(sess.Id(), sess.Expires()))
 	w.Header().Add(tagCache_control, tagNo_store)
 	w.Header().Add(tagPragma, tagNo_cache)
 

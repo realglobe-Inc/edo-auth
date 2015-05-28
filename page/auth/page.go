@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+// ユーザー認証代行ページ。
+package auth
 
 import (
 	"encoding/json"
@@ -20,8 +21,9 @@ import (
 	"github.com/realglobe-Inc/edo-auth/database/usession"
 	keydb "github.com/realglobe-Inc/edo-id-provider/database/key"
 	idpdb "github.com/realglobe-Inc/edo-idp-selector/database/idp"
-	webdb "github.com/realglobe-Inc/edo-idp-selector/database/web"
 	"github.com/realglobe-Inc/edo-lib/jwt"
+	logutil "github.com/realglobe-Inc/edo-lib/log"
+	"github.com/realglobe-Inc/edo-lib/rand"
 	"github.com/realglobe-Inc/edo-lib/server"
 	"github.com/realglobe-Inc/go-lib/erro"
 	"github.com/realglobe-Inc/go-lib/rglog/level"
@@ -32,50 +34,118 @@ import (
 	"time"
 )
 
-type system struct {
-	taId    string
+type Page struct {
+	stopper *server.Stopper
+
+	selfId  string
 	rediUri string
 	sigAlg  string
-	sigKid  string
 
 	errTmpl *template.Template
 
-	usessLabel   string
-	usessLen     int
-	authExpIn    time.Duration
-	usessExpIn   time.Duration
-	usessDbExpIn time.Duration
-	statLen      int
-	noncLen      int
-	tokTagLen    int
-	tokDbExpIn   time.Duration
-	jtiLen       int
-	jtiExpIn     time.Duration
+	sessLabel   string
+	sessLen     int
+	sessExpIn   time.Duration
+	sessDbExpIn time.Duration
+	fsessLabel  string
+	fsessLen    int
+	fsessExpIn  time.Duration
+	statLen     int
+	noncLen     int
+	tokTagLen   int
+	tokDbExpIn  time.Duration
+	jtiLen      int
+	jtiExpIn    time.Duration
 
-	keyDb   keydb.Db
-	webDb   webdb.Db
-	idpDb   idpdb.Db
-	usessDb usession.Db
-	tokDb   token.Db
+	keyDb  keydb.Db
+	idpDb  idpdb.Db
+	sessDb usession.Db
+	tokDb  token.Db
 
 	cookPath string
 	cookSec  bool
+
+	idGen rand.Generator
 }
 
-func (sys *system) newUserCookie(sess *usession.Element) *http.Cookie {
+func New(
+	stopper *server.Stopper,
+	selfId string,
+	rediUri string,
+	sigAlg string,
+	errTmpl *template.Template,
+	sessLabel string,
+	sessLen int,
+	sessExpIn time.Duration,
+	sessDbExpIn time.Duration,
+	fsessLabel string,
+	fsessLen int,
+	fsessExpIn time.Duration,
+	statLen int,
+	noncLen int,
+	tokTagLen int,
+	tokDbExpIn time.Duration,
+	jtiLen int,
+	jtiExpIn time.Duration,
+	keyDb keydb.Db,
+	idpDb idpdb.Db,
+	sessDb usession.Db,
+	tokDb token.Db,
+	cookPath string,
+	cookSec bool,
+	idGen rand.Generator,
+) *Page {
+	return &Page{
+		stopper:     stopper,
+		selfId:      selfId,
+		rediUri:     rediUri,
+		sigAlg:      sigAlg,
+		errTmpl:     errTmpl,
+		sessLabel:   sessLabel,
+		sessLen:     sessLen,
+		sessExpIn:   sessExpIn,
+		sessDbExpIn: sessDbExpIn,
+		fsessLabel:  fsessLabel,
+		fsessLen:    fsessLen,
+		fsessExpIn:  fsessExpIn,
+		statLen:     statLen,
+		noncLen:     noncLen,
+		tokTagLen:   tokTagLen,
+		tokDbExpIn:  tokDbExpIn,
+		jtiLen:      jtiLen,
+		jtiExpIn:    jtiExpIn,
+		keyDb:       keyDb,
+		idpDb:       idpDb,
+		sessDb:      sessDb,
+		tokDb:       tokDb,
+		cookPath:    cookPath,
+		cookSec:     cookSec,
+		idGen:       idGen,
+	}
+}
+
+func (this *Page) newCookie(id string, exp time.Time) *http.Cookie {
+	return this._newCookie(this.sessLabel, id, exp)
+}
+
+func (this *Page) newFrontCookie(id string, exp time.Time) *http.Cookie {
+	return this._newCookie(this.fsessLabel, id, exp)
+}
+
+func (this *Page) _newCookie(label, id string, exp time.Time) *http.Cookie {
 	return &http.Cookie{
-		Name:     sys.usessLabel,
-		Value:    sess.Id(),
-		Path:     sys.cookPath,
-		Expires:  sess.Expires(),
-		Secure:   sys.cookSec,
+		Name:     label,
+		Value:    id,
+		Path:     this.cookPath,
+		Expires:  exp,
+		Secure:   this.cookSec,
 		HttpOnly: true,
 	}
 }
 
 // 認可コードを使って、ID プロバイダからアクセストークンを取得する。
-func (sys *system) getAccessToken(req *callbackRequest, idp idpdb.Element, sess *usession.Element) (*token.Element, *idToken, error) {
-	keys, err := sys.keyDb.Get()
+func (this *Page) getAccessToken(req *callbackRequest, idp idpdb.Element, sess *usession.Element) (*token.Element, *idToken, error) {
+	keys, err := this.keyDb.Get()
 	if err != nil {
 		return nil, nil, erro.Wrap(err)
 	}
@@ -94,12 +164,12 @@ func (sys *system) getAccessToken(req *callbackRequest, idp idpdb.Element, sess 
 	// client_assertion
 	ass := jwt.New()
 	now := time.Now()
-	ass.SetHeader(tagAlg, sys.sigAlg)
+	ass.SetHeader(tagAlg, this.sigAlg)
 	ass.SetClaim(tagIss, sess.Ta())
 	ass.SetClaim(tagSub, sess.Ta())
 	ass.SetClaim(tagAud, idp.TokenUri())
-	ass.SetClaim(tagJti, randomString(sys.jtiLen))
-	ass.SetClaim(tagExp, now.Add(sys.jtiExpIn).Unix())
+	ass.SetClaim(tagJti, this.idGen.String(this.jtiLen))
+	ass.SetClaim(tagExp, now.Add(this.jtiExpIn).Unix())
 	ass.SetClaim(tagIat, now.Unix())
 	if err := ass.Sign(keys); err != nil {
 		return nil, nil, erro.Wrap(err)
@@ -129,13 +199,13 @@ func (sys *system) getAccessToken(req *callbackRequest, idp idpdb.Element, sess 
 	if err != nil {
 		return nil, nil, erro.Wrap(server.NewError(http.StatusForbidden, "cannot get access token", nil))
 	}
-	tok := token.New(tokResp.token(), randomString(sys.tokTagLen), tokResp.expires(), idp.Id(), tokResp.scope())
-	log.Info(req, ": Got access token "+mosaic(tok.Id()))
+	tok := token.New(tokResp.token(), this.idGen.String(this.tokTagLen), tokResp.expires(), idp.Id(), tokResp.scope())
+	log.Info(req, ": Got access token "+logutil.Mosaic(tok.Id()))
 
-	if err := sys.tokDb.Save(tok, time.Now().Add(sys.tokDbExpIn)); err != nil {
+	if err := this.tokDb.Save(tok, time.Now().Add(this.tokDbExpIn)); err != nil {
 		return nil, nil, erro.Wrap(err)
 	}
-	log.Info(req, ": Saved access token "+mosaic(tok.Id()))
+	log.Info(req, ": Saved access token "+logutil.Mosaic(tok.Id()))
 
 	idTok, err := parseIdToken(tokResp.idToken())
 	if err != nil {
@@ -153,7 +223,7 @@ func (sys *system) getAccessToken(req *callbackRequest, idp idpdb.Element, sess 
 }
 
 // アクセストークンを使って、ID プロバイダからアカウント情報を取得する。
-func (sys *system) getAccountInfo(req *callbackRequest, tok *token.Element, idp idpdb.Element, sess *usession.Element) (attrs map[string]interface{}, err error) {
+func (this *Page) getAccountInfo(req *callbackRequest, tok *token.Element, idp idpdb.Element, sess *usession.Element) (attrs map[string]interface{}, err error) {
 	acntReq, err := http.NewRequest("GET", idp.AccountUri(), nil)
 	if err != nil {
 		return nil, erro.Wrap(err)

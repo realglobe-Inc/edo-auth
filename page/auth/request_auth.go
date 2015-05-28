@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package auth
 
 import (
 	"github.com/realglobe-Inc/edo-idp-selector/request"
@@ -30,7 +30,7 @@ type authRequest struct {
 
 func parseAuthRequest(r *http.Request, base *request.Request) (req *authRequest, err error) {
 	var authUri *url.URL
-	if rawAuthUri := r.Header.Get(tagX_auth_authentication_uri); rawAuthUri == "" {
+	if rawAuthUri := r.Header.Get(tagX_auth_uri); rawAuthUri == "" {
 		return nil, erro.New("no authentication uri")
 	} else {
 		authUri, err = url.Parse(rawAuthUri)

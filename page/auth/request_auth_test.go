@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package auth
 
 import (
 	"net/http"
@@ -31,7 +31,7 @@ func TestAuthRequest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r.Header.Set("X-Auth-Authentication-Uri", authUri.String())
+	r.Header.Set("X-Auth-Uri", authUri.String())
 
 	req, err := parseAuthRequest(r, nil)
 	if err != nil {
