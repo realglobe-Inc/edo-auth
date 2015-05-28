@@ -15,8 +15,8 @@
 local redis_wrapper = require("lib.redis_wrapper")
 local test = require("test.test")
 local tutil = require("lib.table")
-local session = require("lib.user_session")
-local session_db = require("lib.user_session_db")
+local session = require("lib.coop_session")
+local session_db = require("lib.coop_session_db")
 
 
 -- redis_host: redis のホスト名。
@@ -34,7 +34,12 @@ if err then
 end
 
 
-local sess = session.new("MLWlc1ICtzbpvKS6ML7EHPYrP2QWM4", "eyJhbGciOiJSUzI1NiIsImtpZCI6IjFlOWdkazcifQ.ewogImlzcyI6ICJodHRwOi8vc2VydmVyLmV4YW1wbGUuY29tIiwKICJzdWIiOiAiMjQ4Mjg5NzYxMDAxIiwKICJhdWQiOiAiczZCaGRSa3F0MyIsCiAibm9uY2UiOiAibi0wUzZfV3pBMk1qIiwKICJleHAiOiAxMzExMjgxOTcwLAogImlhdCI6IDEzMTEyODA5NzAKfQ.ggW8hZ1EuVLuxNuuIJKX_V8a_OMXzR0EHR9R6jgdqrOOF4daGU96Sr_P6qJp6IcmD3HP99Obi1PRs-cwh3LO-p146waJ8IhehcwL7F09JdijmBqkvPeB2T9CJNqeGpe-gccMg4vfKjkM8FcGvnzZUN4_KSP0aAp1tOJ1zZwgjxqGByKHiOtX7TpdQyHE5lcMiKPXfEIQILVq0pc_E2DzL7emopWoaoZTF_m0_N0YzFC6g6EJbOEoRoSK5hoDalrcvRYLSrQAZZKflyuVCyixEoV9GfNQC3_osjzw2PAithfubEEBLuVVk4XUVrWOLrLl0nx7RkKU8NXNHq-rvKMzqg")
+local sess = session.new(
+   "MLWlc1ICtzbpvKS6ML7EHPYrP2QWM4",
+   "eyJhbGciOiJub25lIn0.eyJhdF9leHAiOjE0MjY1NjEyNjIsImF0X3RhZyI6InVudG5GZHhOMDMiLCJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLm9yZyIsInN1YiI6Ijc1NUI2MjkyMDhFREZEQzIifQ.",
+   "reader",
+   "https://from.example.org"
+)
 
 local err = db:save(sess, 10)
 if err then
@@ -45,9 +50,8 @@ local sess2, err = db:get(sess:get_id())
 if err then
    return test.response_error("get failed: " .. err)
 elseif sess2 ~= sess then
-   return test.response_error("session is " .. tutil.to_string(sess2:to_table()) .. " not " .. tutil.to_string(sess:to_table()))
+   return test.response_error("session is " .. tutil.to_string(sess2) .. " not " .. tutil.to_string(sess))
 end
-
 
 ngx.status = ngx.HTTP_OK
 return ngx.exit(ngx.status)

@@ -12,25 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package coop
 
 import (
-	"testing"
+	"github.com/realglobe-Inc/go-lib/rglog"
 )
 
-func TestRandomString(t *testing.T) {
-	m := map[string]bool{}
-	for j := 0; j < 100; j++ {
-		for i := 100; i < 200; i++ {
-			id := randomString(i)
-			if m[id] {
-				t.Fatal("overlap " + id)
-			} else if len(id) != i {
-				t.Error(id)
-				t.Error(len(id))
-				t.Fatal(i)
-			}
-			m[id] = true
-		}
-	}
-}
+var log = rglog.Logger("github.com/realglobe-Inc/edo-auth/api/coop")

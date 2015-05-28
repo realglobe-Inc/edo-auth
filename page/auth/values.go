@@ -12,14 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package auth
 
 import ()
 
 const (
-	// コンパイル時に打ち間違いに気付けるように。
-	// それ以上の意味は無い。
-
 	// アンダースコア。
 	tagAlg                    = "alg"
 	tagAmr                    = "amr"
@@ -35,14 +32,12 @@ const (
 	tagClient_assertion_type  = "client_assertion_type"
 	tagClient_id              = "client_id"
 	tagCode                   = "code"
-	tagDetail                 = "detail"
 	tagExp                    = "exp"
 	tagGrant_type             = "grant_type"
 	tagIat                    = "iat"
 	tagId_token               = "id_token"
 	tagIss                    = "iss"
 	tagJti                    = "jti"
-	tagMessage                = "message"
 	tagNbf                    = "nbf"
 	tagNonce                  = "nonce"
 	tagNone                   = "none"
@@ -51,7 +46,6 @@ const (
 	tagResponse_type          = "response_type"
 	tagScope                  = "scope"
 	tagState                  = "state"
-	tagStatus                 = "status"
 	tagSub                    = "sub"
 	tagTyp                    = "typ"
 
@@ -60,20 +54,17 @@ const (
 	tagNo_store = "no-store"
 
 	// 頭大文字、ハイフン。
-	tagAuthorization             = "Authorization"
-	tagBearer                    = "Bearer"
-	tagCache_control             = "Cache-Control"
-	tagContent_length            = "Content-Length"
-	tagContent_type              = "Content-Type"
-	tagPragma                    = "Pragma"
-	tagX_auth_authentication_uri = "X-Auth-Authentication-Uri"
-	tagX_auth_user               = "X-Auth-User"
+	tagAuthorization = "Authorization"
+	tagBearer        = "Bearer"
+	tagCache_control = "Cache-Control"
+	tagContent_type  = "Content-Type"
+	tagPragma        = "Pragma"
+	tagX_auth_uri    = "X-Auth-Uri"
+	tagX_auth_user   = "X-Auth-User"
 )
 
 const (
 	cliAssTypeJwt_bearer = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
-)
 
-const (
 	contTypeForm = "application/x-www-form-urlencoded"
 )

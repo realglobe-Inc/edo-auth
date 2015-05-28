@@ -16,10 +16,10 @@
 -- ユーザー認証代行。
 
 local varutil = require("lib.varutil")
-local ui = require("lib.ui")
+local erro = require("lib.erro")
 local redis_wrapper = require("lib.redis_wrapper")
-local session = require("lib.user_session")
-local session_db = require("lib.user_session_db")
+local session = require("lib.auth_session")
+local session_db = require("lib.auth_session_db")
 
 
 -- $edo_log_level: デバッグログのレベル。
@@ -36,15 +36,22 @@ local redis_keepalive = ngx.var.edo_redis_keepalive or 60 * 1000 -- 1 分。
 -- 1 で十分かと思ったが、ab とかやってみるとそうではなさそう。
 local redis_pool_size = ngx.var.edo_redis_pool_size or 16
 -- $edo_session_tag: セッションを redis に格納する際のキーの接頭辞。
-local redis_session_tag = ngx.var.edo_redis_session_tag or "usession"
--- $edo_callback_location: バックエンドに処理を渡すための location。
-local callback_location = ngx.var.edo_auth_location or "/backend_callback"
+local redis_session_tag = ngx.var.edo_redis_session_tag or "auth.session"
+-- $edo_backend_location: バックエンドに処理を渡すための location。
+local backend_location = ngx.var.edo_auth_location or "/callback_backend"
 
-
--- ここから本編。
 
 -- Set-Cookie ヘッダの内容からセッション ID と有効期限を取得する。
 local function get_session(cookie)
+   if type(cookie) == "table" then
+      for _, v in pairs(cookie) do
+         local id, exp_in = get_session(v)
+         if id then
+            return id, exp_in
+         end
+      end
+      return
+   end
    local id, exp_in
    for k, v in cookie:gmatch(" ?([^;]+)=([^;]+)") do
       if k == "Auth-User" then
@@ -59,8 +66,11 @@ local function get_session(cookie)
 end
 
 
+-- ここから本編。
+
+
 -- バックエンドに処理を投げる。
-local resp = ngx.location.capture(callback_location, {args = ngx.req.get_uri_args() , copy_all_vars = true})
+local resp = ngx.location.capture(backend_location, {args = ngx.req.get_uri_args()})
 
 local account_info = resp.header["X-Auth-User"]
 if account_info then
@@ -72,24 +82,24 @@ if account_info then
    local session_id, session_exp_in = get_session(resp.header["Set-Cookie"])
    if not session_id then
       -- セッションが更新されなかった。
-      return ui.respond_error({status = ngx.HTTP_BAD_REQUEST, message = "no user session"})
+      return erro.respond_html({status = ngx.HTTP_BAD_REQUEST, message = "no user session"})
    elseif (not session_exp_in) or session_exp_in <= 0 then
       -- セッションの有効期限を取得できなかった。
-      return ui.respond_error({status = ngx.HTTP_BAD_REQUEST, message = "cannot get session exipration duration"})
+      return erro.respond_html({status = ngx.HTTP_BAD_REQUEST, message = "cannot get session exipration duration"})
    end
 
    -- セッションが宣言された。
-   ngx.log(log_level, "session is declared")
+   ngx.log(log_level, "user session is declared")
 
    local redis, err = redis_wrapper.new(redis_host, redis_port, redis_timeout, redis_keepalive, redis_pool_size)
    if err then
-      return ui.respond_error({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "database error: " .. err})
+      return erro.respond_html({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "database error: " .. err})
    end
    local database = session_db.new_redis(redis, redis_session_tag)
 
    local err = database:save(session.new(session_id, account_info), session_exp_in)
    if err then
-      return ui.respond_error({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "database error: " .. err})
+      return erro.respond_html({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "database error: " .. err})
    end
    ngx.log(log_level, "saved account info")
 end
@@ -99,7 +109,7 @@ ngx.status = resp.status
 
 -- ヘッダのコピー。
 for k, _ in pairs(ngx.header) do
-   ngx.header = nil
+   ngx.header[k] = nil
 end
 for k, v in pairs(resp.header) do
    ngx.header[k] = v

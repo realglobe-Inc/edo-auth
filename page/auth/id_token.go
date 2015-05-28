@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package auth
 
 import (
 	"bytes"
+	"encoding/json"
 	"github.com/realglobe-Inc/edo-lib/base64url"
 	"github.com/realglobe-Inc/edo-lib/jwk"
 	"github.com/realglobe-Inc/edo-lib/jwt"
@@ -45,20 +46,40 @@ func parseIdToken(raw []byte) (*idToken, error) {
 	if alg == "" {
 		return nil, erro.New("no alg")
 	}
-	idp, _ := base.Claim(tagIss).(string)
-	if idp == "" {
-		return nil, erro.New("no idp")
+	var buff struct {
+		Idp    string `json:"iss"`
+		Nonc   string `json:"nonce"`
+		CHash  string `json:"c_hash"`
+		AtHash string `json:"at_hash"`
 	}
-	nonc, _ := base.Claim(tagNonce).(string)
-	if idp == "" {
+	if err := json.Unmarshal(base.RawBody(), &buff); err != nil {
+		return nil, erro.Wrap(err)
+	} else if buff.Idp == "" {
+		return nil, erro.New("no ID provider ID")
+	} else if buff.Nonc == "" {
 		return nil, erro.New("no nonce")
+	}
+	var cHash, atHash []byte
+	if buff.CHash != "" {
+		cHash, err = base64url.DecodeString(buff.CHash)
+		if err != nil {
+			return nil, erro.Wrap(err)
+		}
+	}
+	if buff.AtHash != "" {
+		atHash, err = base64url.DecodeString(buff.AtHash)
+		if err != nil {
+			return nil, erro.Wrap(err)
+		}
 	}
 
 	return &idToken{
-		base: base,
-		alg:  alg,
-		idp:  idp,
-		nonc: nonc,
+		base:   base,
+		alg:    alg,
+		idp:    buff.Idp,
+		nonc:   buff.Nonc,
+		cHash:  cHash,
+		atHash: atHash,
 	}, nil
 }
 
@@ -78,73 +99,37 @@ func (this *idToken) verify(keys []jwk.Key) error {
 	return this.base.Verify(keys)
 }
 
-func (this *idToken) codeHash() ([]byte, error) {
-	if this.cHash == nil {
-		raw, _ := this.base.Claim(tagC_hash).(string)
-		if raw == "" {
-			return nil, nil
-		}
-		cHash, err := base64url.DecodeString(raw)
-		if err != nil {
-			return nil, erro.Wrap(err)
-		}
-		this.cHash = cHash
-	}
-	return this.cHash, nil
+func (this *idToken) codeHash() []byte {
+	return this.cHash
 }
 
 func (this *idToken) verifyCodeHash(cod string) (err error) {
-	cHash, err := this.codeHash()
-	if err != nil {
-		return erro.Wrap(err)
-	} else if cHash == nil {
-		return nil
-	}
-
-	hGen, err := jwt.HashFunction(this.algorithm())
+	hGen, err := jwt.HashFunction(this.alg)
 	if err != nil {
 		return erro.Wrap(err)
 	}
 	h := hGen.New()
 	h.Write([]byte(cod))
 	hash := h.Sum(nil)
-	if !bytes.Equal(cHash, hash[:len(hash)/2]) {
+	if !bytes.Equal(this.cHash, hash[:len(hash)/2]) {
 		return erro.New("verification failed")
 	}
 	return nil
 }
 
-func (this *idToken) tokenHash() ([]byte, error) {
-	if this.atHash == nil {
-		raw, _ := this.base.Claim(tagAt_hash).(string)
-		if raw == "" {
-			return nil, nil
-		}
-		atHash, err := base64url.DecodeString(raw)
-		if err != nil {
-			return nil, erro.Wrap(err)
-		}
-		this.atHash = atHash
-	}
-	return this.atHash, nil
+func (this *idToken) tokenHash() []byte {
+	return this.atHash
 }
 
 func (this *idToken) verifyTokenHash(tok string) (err error) {
-	atHash, err := this.tokenHash()
-	if err != nil {
-		return erro.Wrap(err)
-	} else if atHash == nil {
-		return nil
-	}
-
-	hGen, err := jwt.HashFunction(this.algorithm())
+	hGen, err := jwt.HashFunction(this.alg)
 	if err != nil {
 		return erro.Wrap(err)
 	}
 	h := hGen.New()
 	h.Write([]byte(tok))
 	hash := h.Sum(nil)
-	if !bytes.Equal(atHash, hash[:len(hash)/2]) {
+	if !bytes.Equal(this.atHash, hash[:len(hash)/2]) {
 		return erro.New("verification failed")
 	}
 	return nil

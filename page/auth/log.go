@@ -12,21 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package auth
 
 import (
 	"github.com/realglobe-Inc/go-lib/rglog"
 )
 
-var log = rglog.Logger("github.com/realglobe-Inc/edo-auth/api/coop")
-
-const mosaicThres = 8
-
-// ログにそのまま書くのが憚られるので隠す。
-func mosaic(str string) string {
-	if len(str) <= mosaicThres {
-		return str
-	} else {
-		return str[:mosaicThres] + "..."
-	}
-}
+var log = rglog.Logger("github.com/realglobe-Inc/edo-auth/page/auth")

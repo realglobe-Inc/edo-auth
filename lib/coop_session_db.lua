@@ -12,12 +12,17 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-local session = require("lib.user_session")
+local cjson = require("cjson.safe")
+local session = require("lib.coop_session")
 
 
 -- セッション DB。
 -- バックエンドのデータもこのプログラム専用の前提。
--- セッション ID をキーにアカウント情報を保存する。
+-- {
+--    "user": <アカウント情報>,
+--    "user_tag": <アカウントタグ>,
+--    "from_ta": <要請元 TA>
+-- }
 
 -- メソッド定義。
 local db_redis = {
@@ -29,16 +34,20 @@ local db_redis = {
          return nil, err
       end
 
-      local acnt, err = self.redis.base:get(self.prefix .. id)
+      local buff, err = self.redis.base:get(self.prefix .. id)
       self.redis:close()
       if err then
          return nil, err
-      elseif acnt == ngx.null then
+      elseif buff == ngx.null then
          -- 無かった。
          return nil
       end
 
-      return session.new(id, acnt)
+      local obj, err = cjson.decode(buff)
+      if err then
+         return nil, err
+      end
+      return session.new(id, obj.user, obj.user_tag, obj.from_ta)
    end,
 
    -- 保存。
@@ -47,12 +56,22 @@ local db_redis = {
          return
       end
 
+      local buff, err = cjson.encode({
+            ["id"] = sess:get_id(),
+            ["user"] = sess:get_account(),
+            ["user_tag"] = sess:get_account_tag(),
+            ["from_ta"] = sess:get_from_ta(),
+      })
+      if err then
+         return err
+      end
+
       local _, err = self.redis:connect()
       if err then
          return err
       end
 
-      local _, err = self.redis.base:set(self.prefix .. sess:get_id(), sess:get_account(), "EX", exp_in)
+      local _, err = self.redis.base:set(self.prefix .. sess:get_id(), buff, "EX", exp_in)
       self.redis:close()
       if err then
          return err

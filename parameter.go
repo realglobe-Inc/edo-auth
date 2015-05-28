@@ -50,7 +50,7 @@ type parameters struct {
 	protType string
 
 	// TA としての ID。
-	taId string
+	selfId string
 	// リダイレクトエンドポイント。
 	rediUri string
 	// 署名方式。
@@ -62,19 +62,21 @@ type parameters struct {
 	pathOk   string
 	pathAuth string
 	pathCb   string
-	// UI 用 HTML を提供する URI。
-	pathUi string
-	// UI 用 HTML を置くディレクトリパス。
-	uiDir string
+	pathCoop string
 
 	tmplErr string
 
 	// ユーザーセッション。
 	usessLabel   string
 	usessLen     int
-	authExpIn    time.Duration
 	usessExpIn   time.Duration
 	usessDbExpIn time.Duration
+	// フロントエンド用ユーザーセッション。
+	fsessLabel string
+	fsessLen   int
+	fsessExpIn time.Duration
+	// TA 間連携セッション。
+	tsessLabel string
 	// 認証パラメータ。
 	statLen int
 	noncLen int
@@ -129,6 +131,8 @@ type parameters struct {
 	cookPath string
 	// Set-Cookie を Secure にするか。
 	cookSec bool
+	// 転送先の SSL 証明書を検証しない。
+	noVeri bool
 }
 
 func parseParameters(args ...string) (param *parameters, err error) {
@@ -159,7 +163,7 @@ func parseParameters(args ...string) (param *parameters, err error) {
 	flags.IntVar(&param.socPort, "socPort", 1606, "TCP socket port")
 	flags.StringVar(&param.protType, "protType", "http", "Protocol type")
 
-	flags.StringVar(&param.taId, "taId", "https://ta.example.org", "TA ID")
+	flags.StringVar(&param.selfId, "selfId", "https://ta.example.org", "TA ID")
 	flags.StringVar(&param.rediUri, "rediUri", "https://ta.example.org/callback", "Redirect endpoint")
 	flags.StringVar(&param.sigAlg, "sigAlg", "RS256", "Signature algorithm")
 	flags.StringVar(&param.sigKid, "sigKid", "", "Signature key ID")
@@ -167,16 +171,18 @@ func parseParameters(args ...string) (param *parameters, err error) {
 	flags.StringVar(&param.pathOk, "pathOk", "/ok", "OK URI")
 	flags.StringVar(&param.pathAuth, "pathAuth", "/", "Authnetication URI")
 	flags.StringVar(&param.pathCb, "pathCb", "/callback", "Callback URI")
-	flags.StringVar(&param.pathUi, "pathUi", "/ui", "UI URI")
-	flags.StringVar(&param.uiDir, "uiDir", "", "UI file directory")
+	flags.StringVar(&param.pathCoop, "pathCoop", "/api", "Cooperation URI")
 
 	flags.StringVar(&param.tmplErr, "tmplErr", "", "Error UI template")
 
-	flags.StringVar(&param.usessLabel, "usessLabel", "Auth-User", "User session ID label")
+	flags.StringVar(&param.usessLabel, "usessLabel", "Auth-User-Backend", "User session ID label")
 	flags.IntVar(&param.usessLen, "usessLen", 30, "User session ID length")
-	flags.DurationVar(&param.authExpIn, "authExpIn", 30*time.Minute, "User authentication expiration duration")
-	flags.DurationVar(&param.usessExpIn, "usessExpIn", 7*24*time.Hour, "User session expiration duration")
-	flags.DurationVar(&param.usessDbExpIn, "usessDbExpIn", 14*24*time.Hour, "User session keep duration")
+	flags.DurationVar(&param.usessExpIn, "usessExpIn", time.Hour, "User session expiration duration")
+	flags.DurationVar(&param.usessDbExpIn, "usessDbExpIn", 24*time.Hour, "User session keep duration")
+	flags.StringVar(&param.fsessLabel, "fsessLabel", "Auth-User", "Frontend session ID label")
+	flags.IntVar(&param.fsessLen, "fsessLen", 30, "Frontend session ID length")
+	flags.DurationVar(&param.fsessExpIn, "fsessExpIn", 7*24*time.Hour, "Frontend session expiration duration")
+	flags.StringVar(&param.tsessLabel, "tsessLabel", "Edo-Coop", "Cooperation session ID label")
 	flags.IntVar(&param.statLen, "statLen", 10, "state parameter length")
 	flags.IntVar(&param.noncLen, "noncLen", 10, "nonce parameter length")
 	flags.IntVar(&param.tokTagLen, "tokTagLen", 10, "Token tag length")
@@ -215,6 +221,7 @@ func parseParameters(args ...string) (param *parameters, err error) {
 
 	flags.StringVar(&param.cookPath, "cookPath", "/", "Path in Set-Cookie")
 	flags.BoolVar(&param.cookSec, "cookSec", true, "Secure flag in Set-Cookie")
+	flags.BoolVar(&param.noVeri, "noVeri", false, "Skip SSL verification")
 
 	var config string
 	flags.StringVar(&config, "c", "", "Config file path")

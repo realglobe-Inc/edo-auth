@@ -15,5 +15,5 @@
 
 -- エラー表示。
 
-local ui = require("lib.ui")
-return ui.respond_error(ngx.req.get_uri_args())
+local erro = require("lib.erro")
+return erro.respond_html(ngx.req.get_uri_args())

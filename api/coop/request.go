@@ -12,24 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package coop
 
 import (
-	"github.com/realglobe-Inc/edo-lib/prand"
-	"github.com/realglobe-Inc/edo-lib/secrand"
+	requtil "github.com/realglobe-Inc/edo-idp-selector/request"
 	"github.com/realglobe-Inc/go-lib/erro"
-	"time"
+	"net/http"
 )
 
-// 安全な乱数が使えないときの代替。
-var pr = prand.New(time.Minute)
+type request struct {
+	codToks [][]byte
+}
 
-// 長さを指定して ID 用のランダム文字列をつくる。
-func randomString(length int) string {
-	id, err := secrand.String(length)
-	if err != nil {
-		log.Err(erro.Wrap(err))
-		id = pr.String(length)
+func parseRequest(r *http.Request) (*request, error) {
+	rawCodToks := r.Header[tagX_edo_code_tokens]
+	if rawCodToks == nil {
+		rawCodToks = requtil.FormValues(r.FormValue(tagCode_tokens))
 	}
-	return id
+	if len(rawCodToks) == 0 {
+		return nil, erro.New("no cooperation codes")
+	}
+	codToks := [][]byte{}
+	for _, rawCodTok := range rawCodToks {
+		codToks = append(codToks, []byte(rawCodTok))
+	}
+	return &request{codToks}, nil
+}
+
+func (this *request) codeTokens() [][]byte {
+	return this.codToks
 }
