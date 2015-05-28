@@ -78,7 +78,7 @@ EOF
  cat <<EOF > ${nginx_prefix}/conf/nginx.conf
 events {}
 http {
-    lua_package_path '\$prefix/lua/?.lua;;';
+    lua_package_path '\${prefix}lua/?.lua;;';
     server {
         listen       ${NGINX_PORT};
         location / {
@@ -129,7 +129,7 @@ EOF
  cat <<EOF > ${nginx_prefix}/conf/nginx.conf
 events {}
 http {
-    lua_package_path '\$prefix/lua/?.lua;;';
+    lua_package_path '\${prefix}lua/?.lua;;';
     server {
         listen       ${NGINX_PORT};
         location / {
@@ -156,11 +156,11 @@ EOF
  cat <<EOF > ${nginx_prefix}/conf/nginx.conf
 events {}
 http {
-    lua_package_path '\$prefix/lua/?.lua;;';
+    lua_package_path '\${prefix}lua/?.lua;;';
     server {
         listen       ${NGINX_PORT};
         location / {
-            access_by_lua_file lua/test/user_session.lua;
+            access_by_lua_file lua/test/auth_session.lua;
         }
     }
 }
@@ -182,13 +182,13 @@ EOF
  cat <<EOF > ${nginx_prefix}/conf/nginx.conf
 events {}
 http {
-    lua_package_path '\$prefix/lua/?.lua;;';
+    lua_package_path '\${prefix}lua/?.lua;;';
     server {
         listen       ${NGINX_PORT};
         location / {
             set \$redis_host 127.0.0.1;
             set \$redis_port ${REDIS_PORT};
-            access_by_lua_file lua/test/user_session_db.lua;
+            access_by_lua_file lua/test/auth_session_db.lua;
         }
     }
 }
@@ -202,7 +202,60 @@ EOF
      cat out 1>&2
      exit 1
  fi
- echo "===== user session database passed ====="
+ echo "===== user session DB passed ====="
+
+
+ # ############################################################
+ cat <<EOF > ${nginx_prefix}/conf/nginx.conf
+events {}
+http {
+    lua_package_path '\${prefix}lua/?.lua;;';
+    server {
+        listen       ${NGINX_PORT};
+        location / {
+            access_by_lua_file lua/test/coop_session.lua;
+        }
+    }
+}
+EOF
+ ${NGINX_DIR}/sbin/nginx -p ${nginx_prefix} -s reload
+ sleep ${INTERVAL}
+
+ result=$(curl -o out -s -w "%{http_code}" http://localhost:${NGINX_PORT})
+ if [ "${result}" != "200" ]; then
+     echo ${result} 1>&2
+     cat out 1>&2
+     exit 1
+ fi
+ echo "===== TA session passed ====="
+
+
+ # ############################################################
+ ${REDIS_CLIENT} -p ${REDIS_PORT} flushall > /dev/null
+ cat <<EOF > ${nginx_prefix}/conf/nginx.conf
+events {}
+http {
+    lua_package_path '\${prefix}lua/?.lua;;';
+    server {
+        listen       ${NGINX_PORT};
+        location / {
+            set \$redis_host 127.0.0.1;
+            set \$redis_port ${REDIS_PORT};
+            access_by_lua_file lua/test/coop_session_db.lua;
+        }
+    }
+}
+EOF
+ ${NGINX_DIR}/sbin/nginx -p ${nginx_prefix} -s reload
+ sleep ${INTERVAL}
+
+ result=$(curl -o out -s -w "%{http_code}" http://localhost:${NGINX_PORT})
+ if [ "${result}" != "200" ]; then
+     echo ${result} 1>&2
+     cat out 1>&2
+     exit 1
+ fi
+ echo "===== TA session DB passed ====="
 )
 
 echo "===== all test passed ====="
