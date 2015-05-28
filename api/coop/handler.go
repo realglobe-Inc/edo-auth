@@ -154,27 +154,15 @@ func (this *handler) serve(w http.ResponseWriter, r *http.Request, sender *requt
 		codTok *codeToken
 	}
 	units := []*idpUnit{}
-	for _, rawCoopCod := range req.codeTokens() {
-		jt, err := jwt.Parse(rawCoopCod)
+	for _, rawCodTok := range req.codeTokens() {
+		codTok, err := parseCodeToken(rawCodTok)
 		if err != nil {
 			return erro.Wrap(idperr.New(idperr.Invalid_request, erro.Unwrap(err).Error(), http.StatusBadRequest, err))
-		}
-		var codTok codeToken
-		if err := json.Unmarshal(jt.RawBody(), &codTok); err != nil {
-			return erro.Wrap(idperr.New(idperr.Invalid_request, erro.Unwrap(err).Error(), http.StatusBadRequest, err))
-		} else if codTok.idProvider() == "" {
-			return erro.Wrap(idperr.New(idperr.Invalid_request, "no ID provider ID", http.StatusBadRequest, nil))
-		} else if codTok.code() == "" {
-			return erro.Wrap(idperr.New(idperr.Invalid_request, "no code", http.StatusBadRequest, nil))
-		} else if len(codTok.audience()) == 0 {
-			return erro.Wrap(idperr.New(idperr.Invalid_request, "no audience", http.StatusBadRequest, nil))
 		} else if !codTok.audience()[this.selfId] {
 			return erro.Wrap(idperr.New(idperr.Invalid_request, "invalid audience", http.StatusBadRequest, nil))
 		} else if codTok.referralHash() == "" && len(req.codeTokens()) > 1 {
 			return erro.Wrap(idperr.New(idperr.Invalid_request, "no referral hash", http.StatusBadRequest, nil))
-		}
-
-		if codTok.accountTag() != "" {
+		} else if codTok.accountTag() != "" {
 			if acntTag != "" {
 				return erro.Wrap(idperr.New(idperr.Invalid_request, "two main account tags", http.StatusBadRequest, nil))
 			}
@@ -207,13 +195,13 @@ func (this *handler) serve(w http.ResponseWriter, r *http.Request, sender *requt
 
 		log.Debug(sender, ": ID provider "+idp.Id()+" is exist")
 
-		if err := jt.Verify(idp.Keys()); err != nil {
+		if err := codTok.verify(idp.Keys()); err != nil {
 			return erro.Wrap(idperr.New(idperr.Invalid_request, erro.Unwrap(err).Error(), http.StatusBadRequest, err))
 		}
 
 		log.Debug(sender, ": Verified cooperation code")
 
-		units = append(units, &idpUnit{idp, &codTok})
+		units = append(units, &idpUnit{idp, codTok})
 	}
 	if acntTag == "" {
 		return erro.Wrap(idperr.New(idperr.Invalid_request, "no main account tag", http.StatusBadRequest, nil))
