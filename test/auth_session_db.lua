@@ -15,8 +15,8 @@
 local redis_wrapper = require("lib.redis_wrapper")
 local test = require("test.test")
 local tutil = require("lib.table")
-local session = require("lib.user_session")
-local session_db = require("lib.user_session_db")
+local session = require("lib.auth_session")
+local session_db = require("lib.auth_session_db")
 
 
 -- redis_host: redis のホスト名。
@@ -45,7 +45,7 @@ local sess2, err = db:get(sess:get_id())
 if err then
    return test.response_error("get failed: " .. err)
 elseif sess2 ~= sess then
-   return test.response_error("session is " .. tutil.to_string(sess2:to_table()) .. " not " .. tutil.to_string(sess:to_table()))
+   return test.response_error("session is " .. tutil.to_string(sess2) .. " not " .. tutil.to_string(sess))
 end
 
 

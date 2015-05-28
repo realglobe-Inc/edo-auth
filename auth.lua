@@ -16,10 +16,10 @@
 -- ユーザー認証代行。
 
 local varutil = require("lib.varutil")
-local ui = require("lib.ui")
+local erro = require("lib.erro")
 local redis_wrapper = require("lib.redis_wrapper")
-local session = require("lib.user_session")
-local session_db = require("lib.user_session_db")
+local session = require("lib.auth_session")
+local session_db = require("lib.auth_session_db")
 
 -- $edo_log_level: デバッグログのレベル。
 local log_level = varutil.get_level(ngx.var.edo_log_level)
@@ -35,9 +35,9 @@ local redis_keepalive = ngx.var.edo_redis_keepalive or 60 * 1000 -- 1 分。
 -- 1 で十分かと思ったが、ab とかやってみるとそうではなさそう。
 local redis_pool_size = ngx.var.edo_redis_pool_size or 16
 -- $edo_session_tag: セッションを redis に格納する際のキーの接頭辞。
-local redis_session_tag = ngx.var.edo_redis_session_tag or "usession"
--- $edo_auth_location: バックエンドに処理を渡すための location。
-local auth_location = ngx.var.edo_auth_location or "@backend"
+local redis_session_tag = ngx.var.edo_redis_session_tag or "auth.session"
+-- $edo_backend_location: バックエンドに処理を渡すための location。
+local backend_location = ngx.var.edo_backend_location or "@backend"
 
 
 -- ここから本編。
@@ -45,7 +45,7 @@ local auth_location = ngx.var.edo_auth_location or "@backend"
 
 local redis, err = redis_wrapper.new(redis_host, redis_port, redis_timeout, redis_keepalive, redis_pool_size)
 if err then
-   return ui.respond_error({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "database error: " .. err})
+   return erro.respond_html({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "database error: " .. err})
 end
 local database = session_db.new_redis(redis, redis_session_tag)
 
@@ -54,19 +54,19 @@ local session_id = ngx.var["cookie_auth-user"]
 if not session_id then
    -- セッションが宣言されなかった。
    ngx.log(log_level, "no user session is declared")
-   return ngx.exec(auth_location)
+   return ngx.exec(backend_location)
 end
 
 -- セッションが宣言された。
-ngx.log(log_level, "session is declared")
+ngx.log(log_level, "user session is declared")
 
 local session, err = database:get(session_id)
 if err then
-   return ui.respond_error({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "database error: " .. err})
+   return erro.respond_html({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "database error: " .. err})
 elseif not session then
    -- セッションが無かった。
    ngx.log(log_level, "declared session is not exist")
-   return ngx.exec(auth_location)
+   return ngx.exec(backend_location)
 end
 
 -- セッションがあった。

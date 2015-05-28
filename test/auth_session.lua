@@ -14,7 +14,7 @@
 
 local test = require("test.test")
 local tutil = require("lib.table")
-local session = require("lib.user_session")
+local session = require("lib.auth_session")
 
 
 -- 成功したら 200 OK を返す。
@@ -30,7 +30,7 @@ end
 
 local sess2 = session.new(id, acnt)
 if sess2 ~= sess then
-   return test.response_error("failed to equal " .. tutil.to_string(sess2:to_table()) .. " not " .. tutil.to_string(sess:to_table()))
+   return test.response_error("failed to equal " .. tutil.to_string(sess2) .. " not " .. tutil.to_string(sess))
 end
 
 
