@@ -15,15 +15,17 @@
 package main
 
 import (
+	"github.com/realglobe-Inc/edo-auth/api/coop"
 	"github.com/realglobe-Inc/edo-auth/database/token"
 	"github.com/realglobe-Inc/edo-auth/database/usession"
+	authpage "github.com/realglobe-Inc/edo-auth/page/auth"
 	keydb "github.com/realglobe-Inc/edo-id-provider/database/key"
 	idpdb "github.com/realglobe-Inc/edo-idp-selector/database/idp"
 	webdb "github.com/realglobe-Inc/edo-idp-selector/database/web"
-	idperr "github.com/realglobe-Inc/edo-idp-selector/error"
 	"github.com/realglobe-Inc/edo-idp-selector/request"
 	"github.com/realglobe-Inc/edo-lib/driver"
 	logutil "github.com/realglobe-Inc/edo-lib/log"
+	"github.com/realglobe-Inc/edo-lib/rand"
 	"github.com/realglobe-Inc/edo-lib/server"
 	"github.com/realglobe-Inc/go-lib/erro"
 	"github.com/realglobe-Inc/go-lib/rglog"
@@ -31,7 +33,7 @@ import (
 	"html/template"
 	"net/http"
 	"os"
-	"strings"
+	"time"
 )
 
 func main() {
@@ -87,8 +89,8 @@ func serve(param *parameters) (err error) {
 		keyDb = keydb.NewFileDb(param.keyDbPath)
 		log.Info("Use keys in directory " + param.keyDbPath)
 	case "redis":
-		keyDb = keydb.NewRedisCache(keydb.NewFileDb(param.keyDbPath), redPools.Get(param.keyDbAddr), param.keyDbTag+"."+param.taId, param.keyDbExpIn)
-		log.Info("Use keys in directory " + param.keyDbPath + " with redis " + param.keyDbAddr + ": " + param.keyDbTag + "." + param.taId)
+		keyDb = keydb.NewRedisCache(keydb.NewFileDb(param.keyDbPath), redPools.Get(param.keyDbAddr), param.keyDbTag+"."+param.selfId, param.keyDbExpIn)
+		log.Info("Use keys in directory " + param.keyDbPath + " with redis " + param.keyDbAddr + ": " + param.keyDbTag + "." + param.selfId)
 	default:
 		return erro.New("invalid key DB type " + param.keyDbType)
 	}
@@ -154,35 +156,7 @@ func serve(param *parameters) (err error) {
 		}
 	}
 
-	sys := &system{
-		param.taId,
-		param.rediUri,
-		param.sigAlg,
-		param.sigKid,
-
-		errTmpl,
-
-		param.usessLabel,
-		param.usessLen,
-		param.authExpIn,
-		param.usessExpIn,
-		param.usessDbExpIn,
-		param.statLen,
-		param.noncLen,
-		param.tokTagLen,
-		param.tokDbExpIn,
-		param.jtiLen,
-		param.jtiExpIn,
-
-		keyDb,
-		webDb,
-		idpDb,
-		usessDb,
-		tokDb,
-
-		param.cookPath,
-		param.cookSec,
-	}
+	idGen := rand.New(time.Minute)
 
 	// バックエンドの準備完了。
 
@@ -196,22 +170,61 @@ func serve(param *parameters) (err error) {
 		}
 	}()
 
+	authPage := authpage.New(
+		s,
+		param.selfId,
+		param.rediUri,
+		param.sigAlg,
+		errTmpl,
+		param.usessLabel,
+		param.usessLen,
+		param.usessExpIn,
+		param.usessDbExpIn,
+		param.fsessLabel,
+		param.fsessLen,
+		param.fsessExpIn,
+		param.statLen,
+		param.noncLen,
+		param.tokTagLen,
+		param.tokDbExpIn,
+		param.jtiLen,
+		param.jtiExpIn,
+		keyDb,
+		idpDb,
+		usessDb,
+		tokDb,
+		param.cookPath,
+		param.cookSec,
+		idGen,
+	)
+
 	mux := http.NewServeMux()
 	routes := map[string]bool{}
 	mux.HandleFunc(param.pathOk, pagePanicErrorWrapper(s, errTmpl, func(w http.ResponseWriter, r *http.Request) error {
 		return nil
 	}))
 	routes[param.pathOk] = true
-	mux.HandleFunc(param.pathAuth, pagePanicErrorWrapper(s, errTmpl, sys.authPage))
+	mux.HandleFunc(param.pathAuth, authPage.HandleAuth)
 	routes[param.pathAuth] = true
-	mux.HandleFunc(param.pathCb, pagePanicErrorWrapper(s, errTmpl, sys.callbackPage))
+	mux.HandleFunc(param.pathCb, authPage.HandleCallback)
 	routes[param.pathCb] = true
-	if param.uiDir != "" {
-		// ファイル配信も自前でやる。
-		pathUi := strings.TrimRight(param.pathUi, "/") + "/"
-		mux.Handle(pathUi, http.StripPrefix(pathUi, http.FileServer(http.Dir(param.uiDir))))
-		routes[param.pathUi] = true
-	}
+	mux.Handle(param.pathCoop, coop.New(
+		s,
+		param.selfId,
+		param.sigAlg,
+		param.sigKid,
+		param.tsessLabel,
+		param.tokTagLen,
+		param.tokDbExpIn,
+		param.jtiLen,
+		param.jtiExpIn,
+		keyDb,
+		idpDb,
+		tokDb,
+		param.noVeri,
+		idGen,
+	))
+	routes[param.pathCoop] = true
 
 	if !routes["/"] {
 		mux.HandleFunc("/", pagePanicErrorWrapper(s, errTmpl, func(w http.ResponseWriter, r *http.Request) error {
@@ -241,30 +254,6 @@ func pagePanicErrorWrapper(s *server.Stopper, errTmpl *template.Template, f serv
 
 		if err := f(w, r); err != nil {
 			server.RespondPageError(w, r, erro.Wrap(err), errTmpl, request.Parse(r, "").String()+": ")
-			return
-		}
-	}
-}
-
-func apiPanicErrorWrapper(s *server.Stopper, f server.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		s.Stop()
-		defer s.Unstop()
-
-		// panic時にプロセス終了しないようにrecoverする
-		defer func() {
-			if rcv := recover(); rcv != nil {
-				idperr.RespondApiError(w, r, erro.New(rcv), request.Parse(r, ""))
-				return
-			}
-		}()
-
-		//////////////////////////////
-		server.LogRequest(level.DEBUG, r, true)
-		//////////////////////////////
-
-		if err := f(w, r); err != nil {
-			idperr.RespondApiError(w, r, erro.Wrap(err), request.Parse(r, ""))
 			return
 		}
 	}
