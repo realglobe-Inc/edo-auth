@@ -16,18 +16,56 @@ package coop
 
 import (
 	"encoding/json"
+	"github.com/realglobe-Inc/edo-lib/jwk"
+	"github.com/realglobe-Inc/edo-lib/jwt"
 	"github.com/realglobe-Inc/edo-lib/jwt/audience"
 	"github.com/realglobe-Inc/edo-lib/strset"
 	"github.com/realglobe-Inc/go-lib/erro"
 )
 
+// コードトークン。
 type codeToken struct {
+	base *jwt.Jwt
+
 	idp      string
 	cod      string
 	aud      map[string]bool
 	acntTag  string
 	acntTags map[string]bool
 	refHash  string
+}
+
+func parseCodeToken(raw []byte) (*codeToken, error) {
+	base, err := jwt.Parse(raw)
+	if err != nil {
+		return nil, erro.Wrap(err)
+	}
+	var buff struct {
+		Idp      string            `json:"iss"`
+		Cod      string            `json:"sub"`
+		Aud      audience.Audience `json:"aud"`
+		AcntTag  string            `json:"user_tag"`
+		AcntTags strset.Set        `json:"user_tags"`
+		RefHash  string            `json:"ref_hash"`
+	}
+	if err := json.Unmarshal(base.RawBody(), &buff); err != nil {
+		return nil, erro.Wrap(err)
+	} else if buff.Idp == "" {
+		return nil, erro.New("no ID provider ID")
+	} else if buff.Cod == "" {
+		return nil, erro.New("no code")
+	} else if len(buff.Aud) == 0 {
+		return nil, erro.New("no audience")
+	}
+
+	return &codeToken{
+		base:    base,
+		idp:     buff.Idp,
+		cod:     buff.Cod,
+		aud:     buff.Aud,
+		acntTag: buff.AcntTag,
+		refHash: buff.RefHash,
+	}, nil
 }
 
 func (this *codeToken) code() string {
@@ -54,24 +92,6 @@ func (this *codeToken) accountTags() map[string]bool {
 	return this.acntTags
 }
 
-func (this *codeToken) UnmarshalJSON(data []byte) error {
-	var buff struct {
-		Idp      string            `json:"iss"`
-		Cod      string            `json:"sub"`
-		Aud      audience.Audience `json:"aud"`
-		AcntTag  string            `json:"user_tag"`
-		AcntTags strset.Set        `json:"user_tags"`
-		RefHash  string            `json:"ref_hash"`
-	}
-	if err := json.Unmarshal(data, &buff); err != nil {
-		return erro.Wrap(err)
-	}
-
-	this.idp = buff.Idp
-	this.cod = buff.Cod
-	this.aud = buff.Aud
-	this.acntTag = buff.AcntTag
-	this.acntTags = buff.AcntTags
-	this.refHash = buff.RefHash
-	return nil
+func (this *codeToken) verify(keys []jwk.Key) error {
+	return this.base.Verify(keys)
 }

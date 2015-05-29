@@ -76,7 +76,7 @@ limitations under the License.
 * X-Auth-Related-Users
     * 処理の主体でないアカウントが含まれる場合のみ。
       処理の主体でないアカウント全てについて、アカウントタグからアカウント情報へのマップをクレームセットに含む `alg` が `none` な [JWT]。
-* X-Auth-Ta
+* X-Auth-From-Id
     * 要請元 TA の ID。
 
 また、[TA 間連携プロトコル]のセッションが利用可能な場合はセッションを Set-Cookie ヘッダで通知する。
@@ -92,7 +92,7 @@ X-Auth-User: eyJhbGciOiJub25lIn0.eyJhdF9leHAiOjE0MjY1NjEyNjIsImF0X3RhZyI6InVudG5
 X-Auth-User-Tag: reader
 X-Auth-Related-Users: eyJhbGciOiJub25lIn0.eyJ3cml0ZXIiOnsiaXNzIjoiaHR0cHM6Ly9pZHA
     uZXhhbXBsZS5vcmciLCJzdWIiOiJENUNGM0Y0OUU1RTczMUMzIn19.
-X-Auth-Ta: https://from.example.org
+X-Auth-From-Id: https://from.example.org
 ```
 
 
