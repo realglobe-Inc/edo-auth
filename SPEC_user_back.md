@@ -58,7 +58,7 @@ limitations under the License.
 
 |ヘッダ名|必要性|値|
 |:--|:--|:--|
-|X-Auth-Authentication-Uri|必須|認証機構の URI。パラメータが付加されていても良い|
+|X-Auth-Uri|必須|認証機構の URI。パラメータが付加されていても良い|
 
 * `response_type` パラメータを `code` で追加または上書きする。
 * 認証機構の URI が ID プロバイダの認証エンドポイントの場合、セッションに ID プロバイダを紐付ける。

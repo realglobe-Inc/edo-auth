@@ -94,7 +94,7 @@ edo-auth バックエンドを参照のこと。
 * X-Auth-Related-Users
     * 処理の主体でないアカウントが含まれる場合のみ。
       処理の主体でないアカウント全てについて、アカウントタグからアカウント情報へのマップをクレームセットに含む `alg` が `none` な [JWT]。
-* X-Auth-Ta
+* X-Auth-From-Id
     * 要請元 TA の ID。
 
 アカウント情報は以下の要素を含む。
@@ -132,7 +132,7 @@ X-Auth-User: eyJhbGciOiJub25lIn0.eyJhdF9leHAiOjE0MjY1NjEyNjIsImF0X3RhZyI6InVudG5
     ZHhOMDMiLCJpc3MiOiJodHRwczovL2lkcC5leGFtcGxlLm9yZyIsInN1YiI6Ijc1NUI2MjkyMDhF
     REZEQzIifQ.
 X-Auth-User-Tag: reader
-X-Auth-Ta: https://from.example.org
+X-Auth-From-Id: https://from.example.org
 X-Auth-Related-Users: eyJhbGciOiJub25lIn0.eyJ3cml0ZXIiOnsiaXNzIjoiaHR0cHM6Ly9pZHA
     uZXhhbXBsZS5vcmciLCJzdWIiOiJENUNGM0Y0OUU1RTczMUMzIn19.
 ```
@@ -201,12 +201,12 @@ X-Auth-Related-Users のクレームセットは、
 
 * ID
 * 有効期限
-* アカウントタグ
-* アクセストークン
+* 処理の主体のアカウントタグ
+* 処理の主体のアクセストークン
     * ID
     * タグ
     * 有効期限
-* アカウント情報
+* 処理の主体の情報
 * 要請元 TA の ID
 
 以下の操作が必要。
