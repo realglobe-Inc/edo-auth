@@ -276,7 +276,7 @@ func (this *handler) serve(w http.ResponseWriter, r *http.Request, sender *requt
 	w.Header().Set(tagX_auth_user_tag, acntTag)
 	w.Header().Set(tagX_auth_from_id, frTa)
 	if relInfo != nil {
-		w.Header().Set(tagX_auth_user_tag, acntTag)
+		w.Header().Set(tagX_auth_users, string(relInfo))
 	}
 
 	return nil
@@ -346,6 +346,16 @@ func (this *handler) getInfoFromMainIdProvider(idp idpdb.Element, codTok *codeTo
 	defer resp.Body.Close()
 	server.LogResponse(level.DEBUG, resp, true)
 
+	if resp.StatusCode != http.StatusOK {
+		var buff struct {
+			Error             string
+			Error_description string
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&buff); err != nil {
+			return "", nil, nil, erro.Wrap(err)
+		}
+		return "", nil, nil, erro.Wrap(idperr.New(buff.Error, buff.Error_description, resp.StatusCode, nil))
+	}
 	coopResp, err := parseCoopResponse(resp)
 	if err != nil {
 		return "", nil, nil, erro.Wrap(idperr.New(idperr.Access_denied, erro.Unwrap(err).Error(), http.StatusForbidden, err))
