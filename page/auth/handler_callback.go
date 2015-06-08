@@ -85,7 +85,7 @@ func (this *Page) callbackServe(w http.ResponseWriter, r *http.Request, sender *
 	log.Debug(req, ": Parsed callback request")
 
 	if req.state() != sess.State() {
-		return erro.Wrap(server.NewError(http.StatusForbidden, "invalid nonce", nil))
+		return erro.Wrap(server.NewError(http.StatusForbidden, "invalid state", nil))
 	}
 
 	var idp idpdb.Element

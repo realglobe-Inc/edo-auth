@@ -33,15 +33,11 @@ func parseCallbackRequest(r *http.Request, base *request.Request) (*callbackRequ
 	if cod == "" {
 		return nil, erro.New("no code")
 	}
-	stat := r.FormValue(tagState)
-	if stat == "" {
-		return nil, erro.New("no state")
-	}
 	var idTok []byte
 	if rawIdTok := r.FormValue(tagId_token); rawIdTok != "" {
 		idTok = []byte(rawIdTok)
 	}
-	return &callbackRequest{base, cod, stat, idTok}, nil
+	return &callbackRequest{base, cod, r.FormValue(tagState), idTok}, nil
 }
 
 // 認可コードを返す。
