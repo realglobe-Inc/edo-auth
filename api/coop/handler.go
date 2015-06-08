@@ -276,7 +276,7 @@ func (this *handler) serve(w http.ResponseWriter, r *http.Request, sender *requt
 	w.Header().Set(tagX_auth_user_tag, acntTag)
 	w.Header().Set(tagX_auth_from_id, frTa)
 	if relInfo != nil {
-		w.Header().Set(tagX_auth_user_tag, acntTag)
+		w.Header().Set(tagX_auth_users, string(relInfo))
 	}
 
 	return nil

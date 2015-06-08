@@ -41,6 +41,7 @@ const (
 	tagX_auth_from_id    = "X-Auth-From-Id"
 	tagX_auth_user       = "X-Auth-User"
 	tagX_auth_user_tag   = "X-Auth-User-Tag"
+	tagX_auth_users      = "X-Auth-Users"
 	tagX_edo_code_tokens = "X-Edo-Code-Tokens"
 )
 
