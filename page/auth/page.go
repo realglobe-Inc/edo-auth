@@ -211,7 +211,7 @@ func (this *Page) getAccessToken(req *callbackRequest, idp idpdb.Element, sess *
 	if err != nil {
 		return nil, nil, erro.Wrap(server.NewError(http.StatusForbidden, erro.Unwrap(err).Error(), err))
 	} else if idTok.nonce() != sess.Nonce() {
-		return nil, nil, erro.Wrap(server.NewError(http.StatusBadRequest, "invalid nonce", nil))
+		return nil, nil, erro.Wrap(server.NewError(http.StatusForbidden, "invalid nonce", nil))
 	} else if err := idTok.verify(idp.Keys()); err != nil {
 		return nil, nil, erro.Wrap(server.NewError(http.StatusForbidden, erro.Unwrap(err).Error(), err))
 	} else if idTok.tokenHash() != nil {
