@@ -41,7 +41,7 @@ func init() {
 func newTestHandler(keys []jwk.Key, idps []idpdb.Element) *handler {
 	return New(
 		server.NewStopper(),
-		"https://ta.example.org",
+		"https://to.example.org",
 		test_toTaSigAlg,
 		"",
 		"Edo-Cooperation",

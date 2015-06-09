@@ -41,11 +41,9 @@ limitations under the License.
 
 |Cookie 名|値|
 |:--|:--|
-|Auth-User|セッション ID|
+|Auth-User-Backend|セッション ID|
 
 ユーザー認証開始エンドポイントへのリクエスト時に、セッションを発行し、レスポンス時にセッション ID を通知する。
-
-リダイレクトエンドポイントにて、ユーザー認証が成功した場合、期限を延長する。
 
 
 ## 3. ユーザー認証開始
@@ -91,7 +89,13 @@ Location: https://selector.example.org/?response_type=code%20id_token
 
 * `nonce` がセッションに紐付くものと異なる場合、
     * エラーを返す。
-* そうでなければ、アクセストークンを保存する。以下のパラメータを付加して、セッションに紐付く元にリクエストパスにリダイレクトさせる。
+* そうでなければ、アクセストークンを保存する。
+  以下のセッションを発行する。
+  以下のパラメータを付加して、セッションに紐付く元のリクエストパスにリダイレクトさせる。
+
+|Cookie 名|値|
+|:--|:--|
+|Auth-User|セッション ID|
 
 |HTTP ヘッダ名|値|
 |:--|:--|
@@ -121,7 +125,7 @@ GET /return?code=AFnKabazoCv99dVErDtxs5RYVmwh6R
     DZRciIsInN1YiI6IjE5NTA0MTYyOTc3M0FFQ0MifQ.vevlIy6dviR6Khj8XX-zJttxEbSRych8PI
     wnCQpfTttMMok2xQJu0Pgg2y5a336NOZnQLgJZgLSN4QldZb-oFA&state=Ito-lCrO2H
 Host: ta.example.org
-Cookie: Auth-User=vmU7_v0qxDaCEg-8dHCNANAPVL-8Lj
+Cookie: Auth-User-Backend=vmU7_v0qxDaCEg-8dHCNANAPVL-8Lj
 ```
 
 改行とインデントは表示の都合による。

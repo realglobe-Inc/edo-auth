@@ -91,7 +91,7 @@ edo-auth バックエンドを参照のこと。
     * 処理の主体の情報をクレームセットに含む `alg` が `none` な [JWT]。
 * X-Auth-User-Tag
     * 処理の主体のアカウントタグ。
-* X-Auth-Related-Users
+* X-Auth-Users
     * 処理の主体でないアカウントが含まれる場合のみ。
       処理の主体でないアカウント全てについて、アカウントタグからアカウント情報へのマップをクレームセットに含む `alg` が `none` な [JWT]。
 * X-Auth-From-Id
@@ -133,7 +133,7 @@ X-Auth-User: eyJhbGciOiJub25lIn0.eyJhdF9leHAiOjE0MjY1NjEyNjIsImF0X3RhZyI6InVudG5
     REZEQzIifQ.
 X-Auth-User-Tag: reader
 X-Auth-From-Id: https://from.example.org
-X-Auth-Related-Users: eyJhbGciOiJub25lIn0.eyJ3cml0ZXIiOnsiaXNzIjoiaHR0cHM6Ly9pZHA
+X-Auth-Users: eyJhbGciOiJub25lIn0.eyJ3cml0ZXIiOnsiaXNzIjoiaHR0cHM6Ly9pZHA
     uZXhhbXBsZS5vcmciLCJzdWIiOiJENUNGM0Y0OUU1RTczMUMzIn19.
 ```
 
@@ -150,7 +150,7 @@ X-Auth-User のクレームセットは、
 }
 ```
 
-X-Auth-Related-Users のクレームセットは、
+X-Auth-Users のクレームセットは、
 
 ```json
 {
