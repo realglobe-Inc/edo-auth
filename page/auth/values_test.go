@@ -16,8 +16,8 @@ package auth
 
 import (
 	"encoding/json"
+	hashutil "github.com/realglobe-Inc/edo-id-provider/hash"
 	idpdb "github.com/realglobe-Inc/edo-idp-selector/database/idp"
-	"github.com/realglobe-Inc/edo-lib/base64url"
 	"github.com/realglobe-Inc/edo-lib/jwk"
 	"github.com/realglobe-Inc/edo-lib/jwt"
 	"github.com/realglobe-Inc/go-lib/erro"
@@ -102,10 +102,7 @@ func newCallbackRequestWithIdToken(page *Page, idp idpdb.Element, clms map[strin
 	if err != nil {
 		return nil, erro.Wrap(err)
 	}
-	h := hash.New()
-	h.Write([]byte(test_cod))
-	codHash := h.Sum(nil)
-	idTok.SetClaim("c_hash", base64url.EncodeToString(codHash[:len(codHash)/2]))
+	idTok.SetClaim("c_hash", hashutil.Hashing(hash.New(), []byte(test_cod)))
 	for k, v := range clms {
 		idTok.SetClaim(k, v)
 	}
@@ -148,10 +145,7 @@ func newTestTokenResponse(page *Page, idp idpdb.Element, clms map[string]interfa
 	if err != nil {
 		return 0, nil, nil, erro.Wrap(err)
 	}
-	h := hash.New()
-	h.Write([]byte(test_tok))
-	tokHash := h.Sum(nil)
-	idTok.SetClaim("at_hash", base64url.EncodeToString(tokHash[:len(tokHash)/2]))
+	idTok.SetClaim("at_hash", hashutil.Hashing(hash.New(), []byte(test_tok)))
 	for k, v := range clms {
 		idTok.SetClaim(k, v)
 	}
