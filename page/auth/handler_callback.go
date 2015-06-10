@@ -31,7 +31,7 @@ func (this *Page) HandleCallback(w http.ResponseWriter, r *http.Request) {
 	// panic 対策。
 	defer func() {
 		if rcv := recover(); rcv != nil {
-			server.RespondPageError(w, r, erro.New(rcv), this.errTmpl, sender.String()+": ")
+			server.RespondErrorHtml(w, r, erro.New(rcv), this.errTmpl, sender.String()+": ")
 			return
 		}
 	}()
@@ -50,7 +50,7 @@ func (this *Page) HandleCallback(w http.ResponseWriter, r *http.Request) {
 	defer log.Info(sender, ": Handled callback request")
 
 	if err := this.callbackServe(w, r, sender); err != nil {
-		server.RespondPageError(w, r, erro.Wrap(err), this.errTmpl, sender.String()+": ")
+		server.RespondErrorHtml(w, r, erro.Wrap(err), this.errTmpl, sender.String()+": ")
 		return
 	}
 	return

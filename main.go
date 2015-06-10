@@ -243,7 +243,7 @@ func pagePanicErrorWrapper(s *server.Stopper, errTmpl *template.Template, f serv
 		// panic時にプロセス終了しないようにrecoverする
 		defer func() {
 			if rcv := recover(); rcv != nil {
-				server.RespondPageError(w, r, erro.New(rcv), errTmpl, request.Parse(r, "").String()+": ")
+				server.RespondErrorHtml(w, r, erro.New(rcv), errTmpl, request.Parse(r, "").String()+": ")
 				return
 			}
 		}()
@@ -253,7 +253,7 @@ func pagePanicErrorWrapper(s *server.Stopper, errTmpl *template.Template, f serv
 		//////////////////////////////
 
 		if err := f(w, r); err != nil {
-			server.RespondPageError(w, r, erro.Wrap(err), errTmpl, request.Parse(r, "").String()+": ")
+			server.RespondErrorHtml(w, r, erro.Wrap(err), errTmpl, request.Parse(r, "").String()+": ")
 			return
 		}
 	}
