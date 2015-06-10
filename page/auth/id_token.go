@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/realglobe-Inc/edo-lib/base64url"
+	"github.com/realglobe-Inc/edo-lib/hash"
 	"github.com/realglobe-Inc/edo-lib/jwk"
 	"github.com/realglobe-Inc/edo-lib/jwt"
 	"github.com/realglobe-Inc/go-lib/erro"
@@ -108,10 +109,8 @@ func (this *idToken) verifyCodeHash(cod string) (err error) {
 	if err != nil {
 		return erro.Wrap(err)
 	}
-	h := hGen.New()
-	h.Write([]byte(cod))
-	hash := h.Sum(nil)
-	if !bytes.Equal(this.cHash, hash[:len(hash)/2]) {
+	h := hash.Hashing(hGen.New(), []byte(cod))
+	if !bytes.Equal(this.cHash, h[:len(h)/2]) {
 		return erro.New("verification failed")
 	}
 	return nil
@@ -126,10 +125,8 @@ func (this *idToken) verifyTokenHash(tok string) (err error) {
 	if err != nil {
 		return erro.Wrap(err)
 	}
-	h := hGen.New()
-	h.Write([]byte(tok))
-	hash := h.Sum(nil)
-	if !bytes.Equal(this.atHash, hash[:len(hash)/2]) {
+	h := hash.Hashing(hGen.New(), []byte(tok))
+	if !bytes.Equal(this.atHash, h[:len(h)/2]) {
 		return erro.New("verification failed")
 	}
 	return nil
