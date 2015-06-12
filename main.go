@@ -75,7 +75,7 @@ func serve(param *parameters) (err error) {
 
 	// バックエンドの準備。
 
-	s := server.NewStopper()
+	stopper := server.NewStopper()
 
 	redPools := driver.NewRedisPoolSet(param.redTimeout, param.redPoolSize, param.redPoolExpIn)
 	defer redPools.Close()
@@ -165,7 +165,7 @@ func serve(param *parameters) (err error) {
 	}
 
 	authPage := authpage.New(
-		s,
+		stopper,
 		param.selfId,
 		param.rediUri,
 		param.sigAlg,
@@ -195,7 +195,7 @@ func serve(param *parameters) (err error) {
 
 	mux := http.NewServeMux()
 	routes := map[string]bool{}
-	mux.HandleFunc(param.pathOk, server.WrapPage(s, func(w http.ResponseWriter, r *http.Request) error {
+	mux.HandleFunc(param.pathOk, server.WrapPage(stopper, func(w http.ResponseWriter, r *http.Request) error {
 		return nil
 	}, errTmpl))
 	routes[param.pathOk] = true
@@ -204,7 +204,7 @@ func serve(param *parameters) (err error) {
 	mux.HandleFunc(param.pathCb, authPage.HandleCallback)
 	routes[param.pathCb] = true
 	mux.Handle(param.pathCoop, coop.New(
-		s,
+		stopper,
 		param.selfId,
 		param.sigAlg,
 		param.sigKid,
@@ -223,7 +223,7 @@ func serve(param *parameters) (err error) {
 	routes[param.pathCoop] = true
 
 	if !routes["/"] {
-		mux.HandleFunc("/", server.WrapPage(s, func(w http.ResponseWriter, r *http.Request) error {
+		mux.HandleFunc("/", server.WrapPage(stopper, func(w http.ResponseWriter, r *http.Request) error {
 			return erro.Wrap(server.NewError(http.StatusNotFound, "invalid endpoint", nil))
 		}, errTmpl))
 	}
@@ -232,10 +232,10 @@ func serve(param *parameters) (err error) {
 
 	defer func() {
 		// 処理の終了待ち。
-		s.Lock()
-		defer s.Unlock()
-		for s.Stopped() {
-			s.Wait()
+		stopper.Lock()
+		defer stopper.Unlock()
+		for stopper.Stopped() {
+			stopper.Wait()
 		}
 	}()
 	return server.Serve(param, mux)
