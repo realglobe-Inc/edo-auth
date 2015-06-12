@@ -63,7 +63,7 @@ mkdir -p ${src_dir}
  # openssl
  if ! [ -d openssl-${openssl_ver} ]; then
      if ! [ -f openssl-${openssl_ver}.tar.gz ]; then
-         wget http://www.openssl.org/source/openssl-${openssl_ver}.tar.gz
+         wget ftp://ftp.openssl.org/source/openssl-${openssl_ver}.tar.gz
      fi
      tar zxf openssl-${openssl_ver}.tar.gz
  fi
