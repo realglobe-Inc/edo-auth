@@ -195,9 +195,9 @@ func serve(param *parameters) (err error) {
 		idpDb,
 		usessDb,
 		tokDb,
+		idGen,
 		param.cookPath,
 		param.cookSec,
-		idGen,
 		param.debug,
 	)
 
@@ -224,8 +224,8 @@ func serve(param *parameters) (err error) {
 		keyDb,
 		idpDb,
 		tokDb,
-		param.noVeri,
 		idGen,
+		param.noVeri,
 		param.debug,
 	))
 	routes[param.pathCoop] = true

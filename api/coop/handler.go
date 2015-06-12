@@ -51,10 +51,9 @@ type handler struct {
 	keyDb keydb.Db
 	idpDb idpdb.Db
 	tokDb token.Db
+	idGen rand.Generator
 
 	noVeri bool
-
-	idGen rand.Generator
 	debug  bool
 }
 
@@ -71,8 +70,8 @@ func New(
 	keyDb keydb.Db,
 	idpDb idpdb.Db,
 	tokDb token.Db,
-	noVeri bool,
 	idGen rand.Generator,
+	noVeri bool,
 	debug bool,
 ) http.Handler {
 	return &handler{
@@ -88,8 +87,8 @@ func New(
 		keyDb:      keyDb,
 		idpDb:      idpDb,
 		tokDb:      tokDb,
-		noVeri:     noVeri,
 		idGen:      idGen,
+		noVeri:     noVeri,
 		debug:      debug,
 	}
 }

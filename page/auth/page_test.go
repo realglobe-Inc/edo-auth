@@ -49,9 +49,9 @@ func newTestPage(keys []jwk.Key, idps []idpdb.Element) *Page {
 		idpdb.NewMemoryDb(idps),
 		usession.NewMemoryDb(),
 		token.NewMemoryDb(),
+		rand.New(time.Second),
 		"/",
 		false,
-		rand.New(time.Second),
 		true,
 	)
 }
