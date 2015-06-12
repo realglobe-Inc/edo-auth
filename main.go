@@ -158,6 +158,10 @@ func serve(param *parameters) (err error) {
 
 	// バックエンドの準備完了。
 
+	if param.debug {
+		server.Debug = true
+	}
+
 	s := server.NewStopper()
 	defer func() {
 		// 処理の終了待ち。
@@ -194,6 +198,7 @@ func serve(param *parameters) (err error) {
 		param.cookPath,
 		param.cookSec,
 		idGen,
+		param.debug,
 	)
 
 	mux := http.NewServeMux()
@@ -221,6 +226,7 @@ func serve(param *parameters) (err error) {
 		tokDb,
 		param.noVeri,
 		idGen,
+		param.debug,
 	))
 	routes[param.pathCoop] = true
 

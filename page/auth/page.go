@@ -66,6 +66,7 @@ type Page struct {
 	cookSec  bool
 
 	idGen rand.Generator
+	debug    bool
 }
 
 func New(
@@ -94,6 +95,7 @@ func New(
 	cookPath string,
 	cookSec bool,
 	idGen rand.Generator,
+	debug bool,
 ) *Page {
 	return &Page{
 		stopper:     stopper,
@@ -121,6 +123,7 @@ func New(
 		cookPath:    cookPath,
 		cookSec:     cookSec,
 		idGen:       idGen,
+		debug:       debug,
 	}
 }
 
@@ -186,13 +189,13 @@ func (this *Page) getAccessToken(req *callbackRequest, idp idpdb.Element, sess *
 	}
 	tokReq.Header.Set(tagContent_type, contTypeForm)
 
-	server.LogRequest(level.DEBUG, tokReq, true)
+	server.LogRequest(level.DEBUG, tokReq, this.debug)
 	resp, err := (&http.Client{}).Do(tokReq)
 	if err != nil {
 		return nil, nil, erro.Wrap(err)
 	}
 	defer resp.Body.Close()
-	server.LogResponse(level.DEBUG, resp, true)
+	server.LogResponse(level.DEBUG, resp, this.debug)
 	log.Info(req, ": Got token response from "+idp.Id())
 
 	tokResp, err := parseTokenResponse(resp)
@@ -232,13 +235,13 @@ func (this *Page) getAccountInfo(req *callbackRequest, tok *token.Element, idp i
 	}
 	acntReq.Header.Set(tagAuthorization, tagBearer+" "+tok.Id())
 
-	server.LogRequest(level.DEBUG, acntReq, true)
+	server.LogRequest(level.DEBUG, acntReq, this.debug)
 	resp, err := (&http.Client{}).Do(acntReq)
 	if err != nil {
 		return nil, erro.Wrap(err)
 	}
 	defer resp.Body.Close()
-	server.LogResponse(level.DEBUG, resp, true)
+	server.LogResponse(level.DEBUG, resp, this.debug)
 	log.Info(req, ": Got account info response from "+idp.Id())
 
 	if err := json.NewDecoder(resp.Body).Decode(&attrs); err != nil {

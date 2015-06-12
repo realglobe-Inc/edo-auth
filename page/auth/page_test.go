@@ -52,5 +52,6 @@ func newTestPage(keys []jwk.Key, idps []idpdb.Element) *Page {
 		"/",
 		false,
 		rand.New(time.Second),
+		true,
 	)
 }
