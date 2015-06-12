@@ -75,6 +75,8 @@ func serve(param *parameters) (err error) {
 
 	// バックエンドの準備。
 
+	s := server.NewStopper()
+
 	redPools := driver.NewRedisPoolSet(param.redTimeout, param.redPoolSize, param.redPoolExpIn)
 	defer redPools.Close()
 	monPools := driver.NewMongoPoolSet(param.monTimeout)
@@ -162,16 +164,6 @@ func serve(param *parameters) (err error) {
 		server.Debug = true
 	}
 
-	s := server.NewStopper()
-	defer func() {
-		// 処理の終了待ち。
-		s.Lock()
-		defer s.Unlock()
-		for s.Stopped() {
-			s.Wait()
-		}
-	}()
-
 	authPage := authpage.New(
 		s,
 		param.selfId,
@@ -236,5 +228,15 @@ func serve(param *parameters) (err error) {
 		}, errTmpl))
 	}
 
+	// サーバー設定完了。
+
+	defer func() {
+		// 処理の終了待ち。
+		s.Lock()
+		defer s.Unlock()
+		for s.Stopped() {
+			s.Wait()
+		}
+	}()
 	return server.Serve(param, mux)
 }
