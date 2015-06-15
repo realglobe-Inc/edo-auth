@@ -51,10 +51,10 @@ type handler struct {
 	keyDb keydb.Db
 	idpDb idpdb.Db
 	tokDb token.Db
+	idGen rand.Generator
 
 	noVeri bool
-
-	idGen rand.Generator
+	debug  bool
 }
 
 func New(
@@ -70,8 +70,9 @@ func New(
 	keyDb keydb.Db,
 	idpDb idpdb.Db,
 	tokDb token.Db,
-	noVeri bool,
 	idGen rand.Generator,
+	noVeri bool,
+	debug bool,
 ) http.Handler {
 	return &handler{
 		stopper:    stopper,
@@ -86,8 +87,9 @@ func New(
 		keyDb:      keyDb,
 		idpDb:      idpDb,
 		tokDb:      tokDb,
-		noVeri:     noVeri,
 		idGen:      idGen,
+		noVeri:     noVeri,
+		debug:      debug,
 	}
 }
 
@@ -127,7 +129,7 @@ func (this *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//////////////////////////////
-	server.LogRequest(level.DEBUG, r, true)
+	server.LogRequest(level.DEBUG, r, this.debug)
 	//////////////////////////////
 
 	sender = requtil.Parse(r, this.sessLabel)
@@ -338,13 +340,13 @@ func (this *handler) getInfoFromMainIdProvider(idp idpdb.Element, codTok *codeTo
 	r.Header.Set(tagContent_type, contTypeJson)
 	log.Debug(sender, ": Made main cooperation-to request")
 
-	server.LogRequest(level.DEBUG, r, true)
+	server.LogRequest(level.DEBUG, r, this.debug)
 	resp, err := this.httpClient().Do(r)
 	if err != nil {
 		return "", nil, nil, erro.Wrap(err)
 	}
 	defer resp.Body.Close()
-	server.LogResponse(level.DEBUG, resp, true)
+	server.LogResponse(level.DEBUG, resp, this.debug)
 
 	if resp.StatusCode != http.StatusOK {
 		var buff struct {

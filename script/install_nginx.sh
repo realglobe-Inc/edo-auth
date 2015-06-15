@@ -23,7 +23,7 @@ lua_nginx_ver=${lua_nginx_ver:=v0.9.15}
 luajit_ver=${luajit_ver:=2.0.3}
 nginx_ver=${nginx_ver:=1.7.10}
 ngx_devel_kit_ver=${ngx_devel_kit_ver:=v0.2.19}
-openssl_ver=${openssl_ver:=1.0.2a}
+openssl_ver=${openssl_ver:=1.0.2b}
 pcre_ver=${pcre_ver:=8.36}
 zlib_ver=${zlib_ver:=1.2.8}
 
@@ -63,7 +63,7 @@ mkdir -p ${src_dir}
  # openssl
  if ! [ -d openssl-${openssl_ver} ]; then
      if ! [ -f openssl-${openssl_ver}.tar.gz ]; then
-         wget http://www.openssl.org/source/openssl-${openssl_ver}.tar.gz
+         wget ftp://ftp.openssl.org/source/openssl-${openssl_ver}.tar.gz
      fi
      tar zxf openssl-${openssl_ver}.tar.gz
  fi
