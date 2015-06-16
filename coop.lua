@@ -36,7 +36,7 @@ local redis_keepalive = ngx.var.edo_redis_keepalive or 60 * 1000 -- 1 分。
 -- 1 で十分かと思ったが、ab とかやってみるとそうではなさそう。
 local redis_pool_size = ngx.var.edo_redis_pool_size or 16
 -- $edo_redis_session_tag: セッションを redis に格納する際のキーの接頭辞。
-local redis_session_tag = ngx.var.edo_redis_session_tag or "coop.session"
+local redis_session_tag = ngx.var.edo_redis_session_tag or "csession"
 -- $edo_backend_location: バックエンドに処理を渡すための location。
 local backend_location = ngx.var.edo_coop_location or "/api_backend"
 
