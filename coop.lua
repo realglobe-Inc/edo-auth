@@ -155,9 +155,9 @@ if not from_ta then
    return erro.respond_json({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "no from-TA"})
 end
 ngx.req.set_header("X-Auth-From-Id", from_ta)
-local related_account_info = resp.header["X-Auth-Related-Users"]
-if related_account_info then
-   ngx.req.set_header("X-Auth-Related-Users", related_account_info)
+local accounts_info = resp.header["X-Auth-Users"]
+if accounts_info then
+   ngx.req.set_header("X-Auth-Users", accounts_info)
 end
 
 local session_id, session_exp_in = get_session(resp.header["Set-Cookie"])
