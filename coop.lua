@@ -48,7 +48,7 @@ local function get_session(cookie)
    end
    local id, exp_in
    for k, v in cookie:gmatch(" ?([^;]+)=([^;]+)") do
-      if k == "Auth-User" then
+      if k == "Edo-Cooperation" then
          id = v
       elseif k == "Expires" then
          exp_in = ngx.parse_http_time(v) - ngx.time()
