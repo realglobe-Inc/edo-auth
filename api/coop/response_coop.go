@@ -46,8 +46,6 @@ func parseCoopResponse(resp *http.Response) (*coopResponse, error) {
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&buff); err != nil {
 		return nil, erro.Wrap(err)
-	} else if buff.Tok == "" {
-		return nil, erro.New("cannot get access token")
 	} else if buff.IdsTok == "" {
 		return nil, erro.New("cannot get IDs token")
 	}

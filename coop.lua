@@ -35,8 +35,8 @@ local redis_keepalive = ngx.var.edo_redis_keepalive or 60 * 1000 -- 1 分。
 -- $edo_redis_pool_size: 1 ワーカー当たりの redis ソケット確保数。
 -- 1 で十分かと思ったが、ab とかやってみるとそうではなさそう。
 local redis_pool_size = ngx.var.edo_redis_pool_size or 16
--- $edo_session_tag: セッションを redis に格納する際のキーの接頭辞。
-local redis_session_tag = ngx.var.edo_redis_session_tag or "coop.session"
+-- $edo_redis_session_tag: セッションを redis に格納する際のキーの接頭辞。
+local redis_session_tag = ngx.var.edo_redis_session_tag or "csession"
 -- $edo_backend_location: バックエンドに処理を渡すための location。
 local backend_location = ngx.var.edo_coop_location or "/api_backend"
 
@@ -48,7 +48,7 @@ local function get_session(cookie)
    end
    local id, exp_in
    for k, v in cookie:gmatch(" ?([^;]+)=([^;]+)") do
-      if k == "Auth-User" then
+      if k == "Edo-Cooperation" then
          id = v
       elseif k == "Expires" then
          exp_in = ngx.parse_http_time(v) - ngx.time()
@@ -155,9 +155,9 @@ if not from_ta then
    return erro.respond_json({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "no from-TA"})
 end
 ngx.req.set_header("X-Auth-From-Id", from_ta)
-local related_account_info = resp.header["X-Auth-Related-Users"]
-if related_account_info then
-   ngx.req.set_header("X-Auth-Related-Users", related_account_info)
+local accounts_info = resp.header["X-Auth-Users"]
+if accounts_info then
+   ngx.req.set_header("X-Auth-Users", accounts_info)
 end
 
 local session_id, session_exp_in = get_session(resp.header["Set-Cookie"])
