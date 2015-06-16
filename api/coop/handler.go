@@ -24,6 +24,7 @@ import (
 	idpdb "github.com/realglobe-Inc/edo-idp-selector/database/idp"
 	idperr "github.com/realglobe-Inc/edo-idp-selector/error"
 	requtil "github.com/realglobe-Inc/edo-idp-selector/request"
+	"github.com/realglobe-Inc/edo-lib/jwk"
 	"github.com/realglobe-Inc/edo-lib/jwt"
 	logutil "github.com/realglobe-Inc/edo-lib/log"
 	"github.com/realglobe-Inc/edo-lib/rand"
@@ -225,7 +226,7 @@ func (this *handler) serve(w http.ResponseWriter, r *http.Request, sender *requt
 			}
 			log.Debug(sender, ": Got account info from main ID provider "+unit.idp.Id())
 		} else {
-			fT, tToA, err = this.getInfoFromSubIdProvider(sender)
+			fT, tToA, err = this.getInfoFromSubIdProvider(unit.idp, unit.codTok, sender)
 			if err != nil {
 				return erro.Wrap(err)
 			}
@@ -285,6 +286,15 @@ func (this *handler) serve(w http.ResponseWriter, r *http.Request, sender *requt
 }
 
 func (this *handler) getInfoFromMainIdProvider(idp idpdb.Element, codTok *codeToken, sender *requtil.Request) (frTa string, tok *token.Element, tagToAttrs map[string]map[string]interface{}, err error) {
+	return this.getInfo(true, idp, codTok, sender)
+}
+
+func (this *handler) getInfoFromSubIdProvider(idp idpdb.Element, codTok *codeToken, sender *requtil.Request) (frTa string, tagToAttrs map[string]map[string]interface{}, err error) {
+	frTa, _, tagToAttrs, err = this.getInfo(false, idp, codTok, sender)
+	return frTa, tagToAttrs, err
+}
+
+func (this *handler) getInfo(isMain bool, idp idpdb.Element, codTok *codeToken, sender *requtil.Request) (frTa string, tok *token.Element, tagToAttrs map[string]map[string]interface{}, err error) {
 	params := map[string]interface{}{}
 
 	// grant_type
@@ -294,7 +304,9 @@ func (this *handler) getInfoFromMainIdProvider(idp idpdb.Element, codTok *codeTo
 	params[tagCode] = codTok.code()
 
 	// claims
-	// TODO 受け取り方を考えないと。
+	if isMain {
+		// TODO 受け取り方を考えないと。
+	}
 
 	// user_claims
 	// TODO 受け取り方を考えないと。
@@ -307,29 +319,11 @@ func (this *handler) getInfoFromMainIdProvider(idp idpdb.Element, codTok *codeTo
 	if err != nil {
 		return "", nil, nil, erro.Wrap(err)
 	}
-
-	{
-		jt := jwt.New()
-		jt.SetHeader(tagAlg, this.sigAlg)
-		if this.sigKid != "" {
-			jt.SetHeader(tagKid, this.sigKid)
-		}
-		jt.SetClaim(tagIss, this.selfId)
-		jt.SetClaim(tagSub, this.selfId)
-		jt.SetClaim(tagAud, idp.CoopToUri())
-		jt.SetClaim(tagJti, this.idGen.String(this.jtiLen))
-		now := time.Now()
-		jt.SetClaim(tagExp, now.Add(this.jtiExpIn).Unix())
-		jt.SetClaim(tagIat, now.Unix())
-		if err := jt.Sign(keys); err != nil {
-			return "", nil, nil, erro.Wrap(err)
-		}
-		assData, err := jt.Encode()
-		if err != nil {
-			return "", nil, nil, erro.Wrap(err)
-		}
-		params[tagClient_assertion] = string(assData)
+	ass, err := this.makeAssertion(keys, idp.CoopToUri())
+	if err != nil {
+		return "", nil, nil, erro.Wrap(err)
 	}
+	params[tagClient_assertion] = string(ass)
 
 	data, err := json.Marshal(params)
 	if err != nil {
@@ -370,18 +364,44 @@ func (this *handler) getInfoFromMainIdProvider(idp idpdb.Element, codTok *codeTo
 		return "", nil, nil, erro.Wrap(idperr.New(idperr.Access_denied, erro.Unwrap(err).Error(), http.StatusForbidden, err))
 	}
 
-	now := time.Now()
-	tok = token.New(coopResp.token(), this.idGen.String(this.tokTagLen), now.Add(coopResp.expiresIn()), idsTok.idProvider(), coopResp.scope())
-	log.Info(sender, ": Got access token "+logutil.Mosaic(tok.Id()))
+	if isMain {
+		if coopResp.token() == "" {
+			return "", nil, nil, erro.Wrap(idperr.New(idperr.Access_denied, "cannot get token", http.StatusForbidden, nil))
+		}
+		now := time.Now()
+		tok = token.New(coopResp.token(), this.idGen.String(this.tokTagLen), now.Add(coopResp.expiresIn()), idsTok.idProvider(), coopResp.scope())
+		log.Info(sender, ": Got access token "+logutil.Mosaic(tok.Id()))
 
-	if err := this.tokDb.Save(tok, now.Add(this.tokDbExpIn)); err != nil {
-		return "", nil, nil, erro.Wrap(err)
+		if err := this.tokDb.Save(tok, now.Add(this.tokDbExpIn)); err != nil {
+			return "", nil, nil, erro.Wrap(err)
+		}
+		log.Info(sender, ": Saved access token "+logutil.Mosaic(tok.Id()))
 	}
-	log.Info(sender, ": Saved access token "+logutil.Mosaic(tok.Id()))
 
 	return idsTok.fromTa(), tok, idsTok.attributes(), nil
 }
 
-func (this *handler) getInfoFromSubIdProvider(sender *requtil.Request) (frTa string, tagToAttrs map[string]map[string]interface{}, err error) {
-	panic("not yet implemented")
+// TA 認証用署名をつくる。
+func (this *handler) makeAssertion(keys []jwk.Key, aud string) ([]byte, error) {
+	ass := jwt.New()
+	ass.SetHeader(tagAlg, this.sigAlg)
+	if this.sigKid != "" {
+		ass.SetHeader(tagKid, this.sigKid)
+	}
+	ass.SetClaim(tagIss, this.selfId)
+	ass.SetClaim(tagSub, this.selfId)
+	ass.SetClaim(tagAud, aud)
+	ass.SetClaim(tagJti, this.idGen.String(this.jtiLen))
+	now := time.Now()
+	ass.SetClaim(tagExp, now.Add(this.jtiExpIn).Unix())
+	ass.SetClaim(tagIat, now.Unix())
+	if err := ass.Sign(keys); err != nil {
+		return nil, erro.Wrap(err)
+	}
+	data, err := ass.Encode()
+	if err != nil {
+		return nil, erro.Wrap(err)
+	}
+
+	return data, nil
 }
