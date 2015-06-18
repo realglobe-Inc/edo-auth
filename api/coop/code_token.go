@@ -59,12 +59,13 @@ func parseCodeToken(raw []byte) (*codeToken, error) {
 	}
 
 	return &codeToken{
-		base:    base,
-		idp:     buff.Idp,
-		cod:     buff.Cod,
-		aud:     buff.Aud,
-		acntTag: buff.AcntTag,
-		refHash: buff.RefHash,
+		base:     base,
+		idp:      buff.Idp,
+		cod:      buff.Cod,
+		aud:      buff.Aud,
+		acntTag:  buff.AcntTag,
+		acntTags: buff.AcntTags,
+		refHash:  buff.RefHash,
 	}, nil
 }
 
