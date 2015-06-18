@@ -208,7 +208,7 @@ func serve(param *parameters) (err error) {
 		param.selfId,
 		param.sigAlg,
 		param.sigKid,
-		param.tsessLabel,
+		param.csessLabel,
 		param.tokTagLen,
 		param.tokDbExpIn,
 		param.jtiLen,
