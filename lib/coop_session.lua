@@ -33,7 +33,7 @@ local session = {
       return self.acnt_tag
    end,
 
-   -- 要請元 TA を返す。
+   -- 連携元 TA を返す。
    get_from_ta = function(self)
       return self.from_ta
    end,

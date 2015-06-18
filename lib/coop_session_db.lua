@@ -21,7 +21,7 @@ local session = require("lib.coop_session")
 -- {
 --    "user": <アカウント情報>,
 --    "user_tag": <アカウントタグ>,
---    "from_ta": <要請元 TA>
+--    "from_ta": <連携元 TA>
 -- }
 
 -- メソッド定義。
