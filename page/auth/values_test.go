@@ -98,7 +98,7 @@ func newCallbackRequestWithIdToken(page *Page, idp idpdb.Element, clms map[strin
 	idTok.SetClaim("exp", now.Add(time.Minute).Unix())
 	idTok.SetClaim("iat", now.Unix())
 	idTok.SetClaim("nonce", test_nonc)
-	hash, err := jwt.HashFunction(test_idpSigAlg)
+	hash, err := jwt.HashGenerator(test_idpSigAlg)
 	if err != nil {
 		return nil, erro.Wrap(err)
 	}
@@ -141,7 +141,7 @@ func newTestTokenResponse(page *Page, idp idpdb.Element, clms map[string]interfa
 	idTok.SetClaim("exp", now.Add(time.Minute).Unix())
 	idTok.SetClaim("iat", now.Unix())
 	idTok.SetClaim("nonce", test_nonc)
-	hash, err := jwt.HashFunction(test_idpSigAlg)
+	hash, err := jwt.HashGenerator(test_idpSigAlg)
 	if err != nil {
 		return 0, nil, nil, erro.Wrap(err)
 	}

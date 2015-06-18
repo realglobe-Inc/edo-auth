@@ -105,7 +105,7 @@ func (this *idToken) codeHash() []byte {
 }
 
 func (this *idToken) verifyCodeHash(cod string) (err error) {
-	hGen, err := jwt.HashFunction(this.alg)
+	hGen, err := jwt.HashGenerator(this.alg)
 	if err != nil {
 		return erro.Wrap(err)
 	}
@@ -121,7 +121,7 @@ func (this *idToken) tokenHash() []byte {
 }
 
 func (this *idToken) verifyTokenHash(tok string) (err error) {
-	hGen, err := jwt.HashFunction(this.alg)
+	hGen, err := jwt.HashGenerator(this.alg)
 	if err != nil {
 		return erro.Wrap(err)
 	}
