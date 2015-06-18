@@ -265,3 +265,178 @@ func TestDenyIdProviderError(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// 仲介コードが 1 つ以上の場合の正常系。
+// レスポンスが X-Auth-User, X-Auth-User-Tag, X-Auth-Users, X-Auth-From-Id を含むことの検査。
+// 主体情報が iss, sub, at_tag, at_exp クレームを含むことの検査。
+// 主体でないアカウント情報が iss, sub クレームを含むことの検査。
+func TestMultiNormal(t *testing.T) {
+	// ////////////////////////////////
+	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
+	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// ////////////////////////////////
+
+	idpServ, err := newTestIdProvider([]jwk.Key{test_idpKey})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer idpServ.close()
+	idp := idpServ.info()
+	subIdpServ, err := newTestIdProvider([]jwk.Key{test_subIdpKey})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer subIdpServ.close()
+	subIdp := subIdpServ.info()
+	hndl := newTestHandler([]jwk.Key{test_toTaKey}, []idpdb.Element{idp, subIdp})
+
+	r, err := newTestRequest(hndl, idp, subIdp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var reqCh <-chan *http.Request
+	{
+		s, h, b, err := newTestMainIdpResponse(hndl, idp)
+		if err != nil {
+			t.Fatal(err)
+		}
+		reqCh = idpServ.addResponse(s, h, b)
+	}
+	var subReqCh <-chan *http.Request
+	{
+		s, h, b, err := newTestSubIdpResponse(hndl, subIdp)
+		if err != nil {
+			t.Fatal(err)
+		}
+		subReqCh = subIdpServ.addResponse(s, h, b)
+	}
+
+	w := httptest.NewRecorder()
+	hndl.ServeHTTP(w, r)
+
+	select {
+	case req := <-reqCh:
+		if contType, contType2 := "application/json", req.Header.Get("Content-Type"); contType2 != contType {
+			t.Error(contType)
+			t.Fatal(contType2)
+		}
+		var buff struct {
+			Grant_type  string
+			Code        string
+			Claims      *claims.Request
+			User_claims claims.Claims
+		}
+		if err := json.NewDecoder(req.Body).Decode(&buff); err != nil {
+			t.Fatal(err)
+		} else if grntType := "cooperation_code"; buff.Grant_type != grntType {
+			t.Error(buff.Grant_type)
+			t.Fatal(grntType)
+		} else if buff.Code != test_cod {
+			t.Error(buff.Code)
+			t.Fatal(test_cod)
+		}
+	case <-time.After(time.Minute):
+		t.Fatal("no request")
+	}
+	select {
+	case req := <-subReqCh:
+		if contType, contType2 := "application/json", req.Header.Get("Content-Type"); contType2 != contType {
+			t.Error(contType)
+			t.Fatal(contType2)
+		}
+		var buff struct {
+			Grant_type  string
+			Code        string
+			Claims      *claims.Request
+			User_claims claims.Claims
+		}
+		if err := json.NewDecoder(req.Body).Decode(&buff); err != nil {
+			t.Fatal(err)
+		} else if grntType := "cooperation_code"; buff.Grant_type != grntType {
+			t.Error(buff.Grant_type)
+			t.Fatal(grntType)
+		} else if buff.Code != test_subCod {
+			t.Error(buff.Code)
+			t.Fatal(test_subCod)
+		}
+	case <-time.After(time.Minute):
+		t.Fatal("no request")
+	}
+
+	if w.Code != http.StatusOK {
+		t.Error(w.Code)
+		t.Fatal(http.StatusOK)
+	}
+	acntJt, err := jwt.Parse([]byte(w.HeaderMap.Get("X-Auth-User")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var acntBuff struct {
+		Iss    string
+		Sub    string
+		At_tag string
+		At_exp int64
+		Email  string
+	}
+	if err := json.Unmarshal(acntJt.RawBody(), &acntBuff); err != nil {
+		t.Fatal(err)
+	} else if acntBuff.Iss != idp.Id() {
+		t.Error(acntBuff.Iss)
+		t.Fatal(idp.Id())
+	} else if acntBuff.Sub != test_acntId {
+		t.Error(acntBuff.Sub)
+		t.Fatal(test_acntId)
+	} else if acntBuff.At_tag == "" {
+		t.Fatal("no token tag")
+	} else if now, exp := time.Now(), time.Unix(acntBuff.At_exp, 0); exp.Before(now) {
+		t.Error("expired")
+		t.Error(now)
+		t.Fatal(exp)
+	} else if acntBuff.Email != test_acntEmail {
+		t.Error(acntBuff.Email)
+		t.Fatal(test_acntEmail)
+	}
+	acntTag := w.HeaderMap.Get("X-Auth-User-Tag")
+	if acntTag != test_acntTag {
+		t.Error(acntTag)
+		t.Fatal(test_acntTag)
+	}
+	acntsJt, err := jwt.Parse([]byte(w.HeaderMap.Get("X-Auth-Users")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	type account struct {
+		Iss   string
+		Sub   string
+		Email string
+	}
+	var acntsBuff map[string]*account
+	if err := json.Unmarshal(acntsJt.RawBody(), &acntsBuff); err != nil {
+		t.Fatal(err)
+	} else if len(acntsBuff) == 0 {
+		t.Fatal("no accounts")
+	} else if subAcnt1 := acntsBuff[test_subAcnt1Tag]; subAcnt1 == nil {
+		t.Fatal("no sub account")
+	} else if subAcnt1.Iss != idp.Id() {
+		t.Error(subAcnt1.Iss)
+		t.Fatal(idp.Id())
+	} else if subAcnt1.Sub != test_subAcnt1Id {
+		t.Error(subAcnt1.Sub)
+		t.Fatal(test_subAcnt1Id)
+	} else if subAcnt1.Email != test_subAcnt1Email {
+		t.Error(subAcnt1.Email)
+		t.Fatal(test_subAcnt1Email)
+	} else if subAcnt2 := acntsBuff[test_subAcnt2Tag]; subAcnt2 == nil {
+		t.Fatal("no sub account")
+	} else if subAcnt2.Iss != subIdp.Id() {
+		t.Error(subAcnt2.Iss)
+		t.Fatal(subIdp.Id())
+	} else if subAcnt2.Sub != test_subAcnt2Id {
+		t.Error(subAcnt2.Sub)
+		t.Fatal(test_subAcnt2Id)
+	} else if subAcnt2.Email != test_subAcnt2Email {
+		t.Error(subAcnt2.Email)
+		t.Fatal(test_subAcnt2Email)
+	}
+}

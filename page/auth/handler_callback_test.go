@@ -16,7 +16,7 @@ package auth
 
 import (
 	"encoding/json"
-	"github.com/realglobe-Inc/edo-auth/database/usession"
+	"github.com/realglobe-Inc/edo-auth/database/asession"
 	idpdb "github.com/realglobe-Inc/edo-idp-selector/database/idp"
 	"github.com/realglobe-Inc/edo-lib/jwk"
 	"github.com/realglobe-Inc/edo-lib/jwt"
@@ -95,7 +95,7 @@ func TestCallback(t *testing.T) {
 	page := newTestPage([]jwk.Key{test_taKey}, []idpdb.Element{idp})
 
 	now := time.Now()
-	sess := usession.New(test_sessId, now.Add(page.sessExpIn), test_reqPath, idp.Id(), page.selfId, page.rediUri, test_stat, test_nonc)
+	sess := asession.New(test_sessId, now.Add(page.sessExpIn), test_reqPath, idp.Id(), page.selfId, page.rediUri, test_stat, test_nonc)
 	page.sessDb.Save(sess, now.Add(time.Minute))
 
 	r, err := newCallbackRequest(page)
@@ -252,7 +252,7 @@ func TestCallbackThroughSelector(t *testing.T) {
 	page := newTestPage([]jwk.Key{test_taKey}, []idpdb.Element{idp})
 
 	now := time.Now()
-	sess := usession.New(test_sessId, now.Add(page.sessExpIn), test_reqPath, "", page.selfId, page.rediUri, test_stat, test_nonc)
+	sess := asession.New(test_sessId, now.Add(page.sessExpIn), test_reqPath, "", page.selfId, page.rediUri, test_stat, test_nonc)
 	page.sessDb.Save(sess, now.Add(time.Minute))
 
 	r, err := newCallbackRequestWithIdToken(page, idp, nil)
@@ -303,7 +303,7 @@ func TestCallbackDenyInvalidState(t *testing.T) {
 	page := newTestPage([]jwk.Key{test_taKey}, []idpdb.Element{idp})
 
 	now := time.Now()
-	sess := usession.New(test_sessId, now.Add(page.sessExpIn), test_reqPath, idp.Id(), page.selfId, page.rediUri, test_stat, test_nonc)
+	sess := asession.New(test_sessId, now.Add(page.sessExpIn), test_reqPath, idp.Id(), page.selfId, page.rediUri, test_stat, test_nonc)
 	page.sessDb.Save(sess, now.Add(time.Minute))
 
 	r, err := newCallbackRequest(page)
@@ -341,7 +341,7 @@ func TestCallbackDenyInvalidNonce(t *testing.T) {
 	page := newTestPage([]jwk.Key{test_taKey}, []idpdb.Element{idp})
 
 	now := time.Now()
-	sess := usession.New(test_sessId, now.Add(page.sessExpIn), test_reqPath, idp.Id(), page.selfId, page.rediUri, test_stat, test_nonc)
+	sess := asession.New(test_sessId, now.Add(page.sessExpIn), test_reqPath, idp.Id(), page.selfId, page.rediUri, test_stat, test_nonc)
 	page.sessDb.Save(sess, now.Add(time.Minute))
 
 	r, err := newCallbackRequest(page)
@@ -385,7 +385,7 @@ func TestCallbackDenyInvalidCodeHash(t *testing.T) {
 	page := newTestPage([]jwk.Key{test_taKey}, []idpdb.Element{idp})
 
 	now := time.Now()
-	sess := usession.New(test_sessId, now.Add(page.sessExpIn), test_reqPath, "", page.selfId, page.rediUri, test_stat, test_nonc)
+	sess := asession.New(test_sessId, now.Add(page.sessExpIn), test_reqPath, "", page.selfId, page.rediUri, test_stat, test_nonc)
 	page.sessDb.Save(sess, now.Add(time.Minute))
 
 	r, err := newCallbackRequestWithIdToken(page, idp, map[string]interface{}{"c_hash": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"})
@@ -418,7 +418,7 @@ func TestCallbackDenyInvalidTokenHash(t *testing.T) {
 	page := newTestPage([]jwk.Key{test_taKey}, []idpdb.Element{idp})
 
 	now := time.Now()
-	sess := usession.New(test_sessId, now.Add(page.sessExpIn), test_reqPath, idp.Id(), page.selfId, page.rediUri, test_stat, test_nonc)
+	sess := asession.New(test_sessId, now.Add(page.sessExpIn), test_reqPath, idp.Id(), page.selfId, page.rediUri, test_stat, test_nonc)
 	page.sessDb.Save(sess, now.Add(time.Minute))
 
 	r, err := newCallbackRequest(page)

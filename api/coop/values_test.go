@@ -27,11 +27,16 @@ import (
 )
 
 const (
-	test_idpSigAlg  = "ES256"
-	test_toTaSigAlg = "ES384"
+	test_idpSigAlg = "ES256"
+	test_cod       = "1SblzkyNc6O867zqdZYPM0T-a7g1n5"
+	test_tok       = "ZkTPOdBdh_bS2PqWnb1r8A3DqeKGCC"
 
-	test_cod = "1SblzkyNc6O867zqdZYPM0T-a7g1n5"
-	test_tok = "ZkTPOdBdh_bS2PqWnb1r8A3DqeKGCC"
+	test_subIdpSigAlg = "ES256"
+	test_subCod       = "iIxcrSU4j4ulTBIy4bOVjX9Epe5k5a"
+
+	test_refHash = "q1wfMtaj8DL_Z2iyDPHEuA"
+
+	test_toTaSigAlg = "ES384"
 
 	test_acntTag   = "main-user"
 	test_acntId    = "EYClXo4mQKwSgPel"
@@ -40,6 +45,10 @@ const (
 	test_subAcnt1Tag   = "sub-user1"
 	test_subAcnt1Id    = "U7pdvT8dYbBFWXdc"
 	test_subAcnt1Email = "subtester1@example.org"
+
+	test_subAcnt2Tag   = "sub-user2"
+	test_subAcnt2Id    = "lgmxuHfXfSTB-1js"
+	test_subAcnt2Email = "subtester2@example.org"
 )
 
 var (
@@ -49,6 +58,13 @@ var (
 		"x":   "lpHYO1qpjU95B2sThPR2-1jv44axgaEDkQtcKNE-oZs",
 		"y":   "soy5O11SFFFeYdhQVodXlYPIpeo0pCS69IxiVPPf0Tk",
 		"d":   "3BhkCluOkm8d8gvaPD5FDG2zeEw2JKf3D5LwN-mYmsw",
+	})
+	test_subIdpKey, _ = jwk.FromMap(map[string]interface{}{
+		"kty": "EC",
+		"crv": "P-256",
+		"x":   "vQ3EYqVi30Zd4NF0hbKdHIMZAngSrhwa3mxx74zXkDc",
+		"y":   "OwPvhvTL0SlgB7SpucwBOyjbbY0V8M1-dS6FwkMPGD8",
+		"d":   "Y4YXo4D_B5FMj_5oXizubBDWRWETRpWr8jX969odblA",
 	})
 	test_toTaKey, _ = jwk.FromMap(map[string]interface{}{
 		"kty": "EC",
@@ -89,6 +105,54 @@ func newTestSingleRequest(hndl *handler, idp idpdb.Element) (*http.Request, erro
 
 // コードトークン 1 つの場合の ID プロバイダからのレスポンス。
 func newTestSingleIdpResponse(hndl *handler, idp idpdb.Element) (status int, header http.Header, body []byte, err error) {
+	return newTestMainIdpResponse(hndl, idp)
+}
+
+// コードトークン 2 つ以上のリクエスト。
+func newTestRequest(hndl *handler, idp, subIdp idpdb.Element) (*http.Request, error) {
+	r, err := http.NewRequest("GET", "http://localhost/coop", nil)
+	if err != nil {
+		return nil, erro.Wrap(err)
+	}
+
+	codTok := jwt.New()
+	codTok.SetHeader("alg", test_idpSigAlg)
+	codTok.SetClaim("iss", idp.Id())
+	codTok.SetClaim("sub", test_cod)
+	codTok.SetClaim("aud", audience.New(hndl.selfId))
+	codTok.SetClaim("from_client", test_frTa.Id())
+	codTok.SetClaim("user_tag", test_acntTag)
+	codTok.SetClaim("user_tags", []string{test_subAcnt1Tag})
+	codTok.SetClaim("ref_hash", test_refHash)
+	if err := codTok.Sign(idp.Keys()); err != nil {
+		return nil, erro.Wrap(err)
+	}
+	data, err := codTok.Encode()
+	if err != nil {
+		return nil, erro.Wrap(err)
+	}
+	r.Header.Set("X-Edo-Code-Tokens", string(data))
+
+	subCodTok := jwt.New()
+	subCodTok.SetHeader("alg", test_subIdpSigAlg)
+	subCodTok.SetClaim("iss", subIdp.Id())
+	subCodTok.SetClaim("sub", test_subCod)
+	subCodTok.SetClaim("aud", audience.New(hndl.selfId))
+	subCodTok.SetClaim("user_tags", []string{test_subAcnt2Tag})
+	subCodTok.SetClaim("ref_hash", test_refHash)
+	if err := subCodTok.Sign(subIdp.Keys()); err != nil {
+		return nil, erro.Wrap(err)
+	}
+	subData, err := subCodTok.Encode()
+	if err != nil {
+		return nil, erro.Wrap(err)
+	}
+	r.Header.Add("X-Edo-Code-Tokens", string(subData))
+
+	return r, nil
+}
+
+func newTestMainIdpResponse(hndl *handler, idp idpdb.Element) (status int, header http.Header, body []byte, err error) {
 	now := time.Now()
 
 	idsTok := jwt.New()
@@ -122,6 +186,41 @@ func newTestSingleIdpResponse(hndl *handler, idp idpdb.Element) (status int, hea
 		"expires_in":   1234,
 		"scope":        "openid email",
 		"ids_token":    string(data),
+	}
+	body, err = json.Marshal(m)
+	if err != nil {
+		return 0, nil, nil, erro.Wrap(err)
+	}
+
+	return http.StatusOK, http.Header{"Content-Type": {"application/json"}}, body, nil
+}
+
+func newTestSubIdpResponse(hndl *handler, idp idpdb.Element) (status int, header http.Header, body []byte, err error) {
+	now := time.Now()
+
+	idsTok := jwt.New()
+	idsTok.SetHeader("alg", test_idpSigAlg)
+	idsTok.SetClaim("iss", idp.Id())
+	idsTok.SetClaim("sub", test_frTa.Id())
+	idsTok.SetClaim("aud", audience.New(hndl.selfId))
+	idsTok.SetClaim("exp", now.Add(time.Minute).Unix())
+	idsTok.SetClaim("iat", now.Unix())
+	idsTok.SetClaim("ids", map[string]map[string]interface{}{
+		test_subAcnt2Tag: {
+			"sub":   test_subAcnt2Id,
+			"email": test_subAcnt2Email,
+		},
+	})
+	if err := idsTok.Sign(idp.Keys()); err != nil {
+		return 0, nil, nil, erro.Wrap(err)
+	}
+	data, err := idsTok.Encode()
+	if err != nil {
+		return 0, nil, nil, erro.Wrap(err)
+	}
+
+	m := map[string]interface{}{
+		"ids_token": string(data),
 	}
 	body, err = json.Marshal(m)
 	if err != nil {

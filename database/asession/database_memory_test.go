@@ -12,25 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package usession
+package asession
 
 import (
-	"github.com/realglobe-Inc/edo-lib/test"
 	"testing"
 )
 
-const (
-	test_tag = "edo-test"
-)
-
-func TestRedisDb(t *testing.T) {
-	red, err := test.NewRedisServer()
-	if err != nil {
-		t.Fatal(err)
-	} else if red == nil {
-		t.SkipNow()
-	}
-	defer red.Close()
-
-	testDb(t, NewRedisDb(red.Pool(), test_tag))
+func TestMemoryDb(t *testing.T) {
+	testDb(t, NewMemoryDb())
 }

@@ -105,12 +105,12 @@ func (this *idToken) codeHash() []byte {
 }
 
 func (this *idToken) verifyCodeHash(cod string) (err error) {
-	hGen, err := jwt.HashFunction(this.alg)
-	if err != nil {
-		return erro.Wrap(err)
+	hGen := jwt.HashGenerator(this.alg)
+	if !hGen.Available() {
+		return erro.New("unsupported algorithm " + this.alg)
 	}
-	h := hash.Hashing(hGen.New(), []byte(cod))
-	if !bytes.Equal(this.cHash, h[:len(h)/2]) {
+	hVal := hash.Hashing(hGen.New(), []byte(cod))
+	if !bytes.Equal(this.cHash, hVal[:len(hVal)/2]) {
 		return erro.New("verification failed")
 	}
 	return nil
@@ -121,12 +121,12 @@ func (this *idToken) tokenHash() []byte {
 }
 
 func (this *idToken) verifyTokenHash(tok string) (err error) {
-	hGen, err := jwt.HashFunction(this.alg)
-	if err != nil {
-		return erro.Wrap(err)
+	hGen := jwt.HashGenerator(this.alg)
+	if !hGen.Available() {
+		return erro.New("unsupported algorithm " + this.alg)
 	}
-	h := hash.Hashing(hGen.New(), []byte(tok))
-	if !bytes.Equal(this.atHash, h[:len(h)/2]) {
+	hVal := hash.Hashing(hGen.New(), []byte(tok))
+	if !bytes.Equal(this.atHash, hVal[:len(hVal)/2]) {
 		return erro.New("verification failed")
 	}
 	return nil
