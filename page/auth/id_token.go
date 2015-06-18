@@ -109,8 +109,8 @@ func (this *idToken) verifyCodeHash(cod string) (err error) {
 	if !hGen.Available() {
 		return erro.New("unsupported algorithm " + this.alg)
 	}
-	h := hash.Hashing(hGen.New(), []byte(cod))
-	if !bytes.Equal(this.cHash, h[:len(h)/2]) {
+	hVal := hash.Hashing(hGen.New(), []byte(cod))
+	if !bytes.Equal(this.cHash, hVal[:len(hVal)/2]) {
 		return erro.New("verification failed")
 	}
 	return nil
@@ -125,8 +125,8 @@ func (this *idToken) verifyTokenHash(tok string) (err error) {
 	if !hGen.Available() {
 		return erro.New("unsupported algorithm " + this.alg)
 	}
-	h := hash.Hashing(hGen.New(), []byte(tok))
-	if !bytes.Equal(this.atHash, h[:len(h)/2]) {
+	hVal := hash.Hashing(hGen.New(), []byte(tok))
+	if !bytes.Equal(this.atHash, hVal[:len(hVal)/2]) {
 		return erro.New("verification failed")
 	}
 	return nil
