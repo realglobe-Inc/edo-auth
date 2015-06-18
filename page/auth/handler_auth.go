@@ -15,7 +15,7 @@
 package auth
 
 import (
-	"github.com/realglobe-Inc/edo-auth/database/usession"
+	"github.com/realglobe-Inc/edo-auth/database/asession"
 	"github.com/realglobe-Inc/edo-idp-selector/request"
 	logutil "github.com/realglobe-Inc/edo-lib/log"
 	"github.com/realglobe-Inc/edo-lib/server"
@@ -125,7 +125,7 @@ func (this *Page) authServe(w http.ResponseWriter, r *http.Request, sender *requ
 
 	authUri.RawQuery = queries.Encode()
 
-	sess := usession.New(
+	sess := asession.New(
 		this.idGen.String(this.sessLen),
 		time.Now().Add(this.sessExpIn),
 		req.path(),

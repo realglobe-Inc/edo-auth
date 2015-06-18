@@ -67,10 +67,10 @@ type parameters struct {
 	tmplErr string
 
 	// ユーザーセッション。
-	usessLabel   string
-	usessLen     int
-	usessExpIn   time.Duration
-	usessDbExpIn time.Duration
+	asessLabel   string
+	asessLen     int
+	asessExpIn   time.Duration
+	asessDbExpIn time.Duration
 	// フロントエンド用ユーザーセッション。
 	fsessLabel string
 	fsessLen   int
@@ -116,9 +116,9 @@ type parameters struct {
 	idpDbTag2 string
 
 	// ユーザーセッション DB。
-	usessDbType string
-	usessDbAddr string
-	usessDbTag  string
+	asessDbType string
+	asessDbAddr string
+	asessDbTag  string
 
 	// アクセストークン DB。
 	tokDbType string
@@ -177,10 +177,10 @@ func parseParameters(args ...string) (param *parameters, err error) {
 
 	flags.StringVar(&param.tmplErr, "tmplErr", "", "Error UI template")
 
-	flags.StringVar(&param.usessLabel, "usessLabel", "Auth-User-Backend", "User session ID label")
-	flags.IntVar(&param.usessLen, "usessLen", 30, "User session ID length")
-	flags.DurationVar(&param.usessExpIn, "usessExpIn", time.Hour, "User session expiration duration")
-	flags.DurationVar(&param.usessDbExpIn, "usessDbExpIn", 24*time.Hour, "User session keep duration")
+	flags.StringVar(&param.asessLabel, "asessLabel", "Auth-User-Backend", "User session ID label")
+	flags.IntVar(&param.asessLen, "asessLen", 30, "User session ID length")
+	flags.DurationVar(&param.asessExpIn, "asessExpIn", time.Hour, "User session expiration duration")
+	flags.DurationVar(&param.asessDbExpIn, "asessDbExpIn", 24*time.Hour, "User session keep duration")
 	flags.StringVar(&param.fsessLabel, "fsessLabel", "Auth-User", "Frontend session ID label")
 	flags.IntVar(&param.fsessLen, "fsessLen", 30, "Frontend session ID length")
 	flags.DurationVar(&param.fsessExpIn, "fsessExpIn", 7*24*time.Hour, "Frontend session expiration duration")
@@ -213,9 +213,9 @@ func parseParameters(args ...string) (param *parameters, err error) {
 	flags.StringVar(&param.idpDbTag, "idpDbTag", "edo", "IdP DB tag")
 	flags.StringVar(&param.idpDbTag2, "idpDbTag2", "idp", "IdP DB sub tag")
 
-	flags.StringVar(&param.usessDbType, "usessDbType", "redis", "User session DB type")
-	flags.StringVar(&param.usessDbAddr, "usessDbAddr", "localhost:6379", "User session DB address")
-	flags.StringVar(&param.usessDbTag, "usessDbTag", "backend.usession", "User session DB tag")
+	flags.StringVar(&param.asessDbType, "asessDbType", "redis", "User session DB type")
+	flags.StringVar(&param.asessDbAddr, "asessDbAddr", "localhost:6379", "User session DB address")
+	flags.StringVar(&param.asessDbTag, "asessDbTag", "backend.asession", "User session DB tag")
 
 	flags.StringVar(&param.tokDbType, "tokDbType", "redis", "Access token DB type")
 	flags.StringVar(&param.tokDbAddr, "tokDbAddr", "localhost:6379", "Access token DB address")

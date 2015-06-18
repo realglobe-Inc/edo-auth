@@ -18,7 +18,7 @@ package auth
 import (
 	"encoding/json"
 	"github.com/realglobe-Inc/edo-auth/database/token"
-	"github.com/realglobe-Inc/edo-auth/database/usession"
+	"github.com/realglobe-Inc/edo-auth/database/asession"
 	keydb "github.com/realglobe-Inc/edo-id-provider/database/key"
 	idpdb "github.com/realglobe-Inc/edo-idp-selector/database/idp"
 	"github.com/realglobe-Inc/edo-lib/jwt"
@@ -59,7 +59,7 @@ type Page struct {
 
 	keyDb  keydb.Db
 	idpDb  idpdb.Db
-	sessDb usession.Db
+	sessDb asession.Db
 	tokDb  token.Db
 	idGen  rand.Generator
 
@@ -89,7 +89,7 @@ func New(
 	jtiExpIn time.Duration,
 	keyDb keydb.Db,
 	idpDb idpdb.Db,
-	sessDb usession.Db,
+	sessDb asession.Db,
 	tokDb token.Db,
 	idGen rand.Generator,
 	cookPath string,
@@ -146,7 +146,7 @@ func (this *Page) _newCookie(label, id string, exp time.Time) *http.Cookie {
 }
 
 // 認可コードを使って、ID プロバイダからアクセストークンを取得する。
-func (this *Page) getAccessToken(req *callbackRequest, idp idpdb.Element, sess *usession.Element) (*token.Element, *idToken, error) {
+func (this *Page) getAccessToken(req *callbackRequest, idp idpdb.Element, sess *asession.Element) (*token.Element, *idToken, error) {
 	keys, err := this.keyDb.Get()
 	if err != nil {
 		return nil, nil, erro.Wrap(err)
@@ -227,7 +227,7 @@ func (this *Page) getAccessToken(req *callbackRequest, idp idpdb.Element, sess *
 }
 
 // アクセストークンを使って、ID プロバイダからアカウント情報を取得する。
-func (this *Page) getAccountInfo(req *callbackRequest, tok *token.Element, idp idpdb.Element, sess *usession.Element) (attrs map[string]interface{}, err error) {
+func (this *Page) getAccountInfo(req *callbackRequest, tok *token.Element, idp idpdb.Element, sess *asession.Element) (attrs map[string]interface{}, err error) {
 	acntReq, err := http.NewRequest("GET", idp.AccountUri(), nil)
 	if err != nil {
 		return nil, erro.Wrap(err)

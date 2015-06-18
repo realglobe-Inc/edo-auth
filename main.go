@@ -17,7 +17,7 @@ package main
 import (
 	"github.com/realglobe-Inc/edo-auth/api/coop"
 	"github.com/realglobe-Inc/edo-auth/database/token"
-	"github.com/realglobe-Inc/edo-auth/database/usession"
+	"github.com/realglobe-Inc/edo-auth/database/asession"
 	authpage "github.com/realglobe-Inc/edo-auth/page/auth"
 	keydb "github.com/realglobe-Inc/edo-id-provider/database/key"
 	idpdb "github.com/realglobe-Inc/edo-idp-selector/database/idp"
@@ -123,16 +123,16 @@ func serve(param *parameters) (err error) {
 	}
 
 	// セッション。
-	var usessDb usession.Db
-	switch param.usessDbType {
+	var asessDb asession.Db
+	switch param.asessDbType {
 	case "memory":
-		usessDb = usession.NewMemoryDb()
+		asessDb = asession.NewMemoryDb()
 		log.Info("Save user sessions in memory")
 	case "redis":
-		usessDb = usession.NewRedisDb(redPools.Get(param.usessDbAddr), param.usessDbTag)
-		log.Info("Save user sessions in redis " + param.usessDbAddr + ": " + param.usessDbTag)
+		asessDb = asession.NewRedisDb(redPools.Get(param.asessDbAddr), param.asessDbTag)
+		log.Info("Save user sessions in redis " + param.asessDbAddr + ": " + param.asessDbTag)
 	default:
-		return erro.New("invalid user session DB type " + param.usessDbType)
+		return erro.New("invalid user session DB type " + param.asessDbType)
 	}
 
 	// アクセストークン。
@@ -170,10 +170,10 @@ func serve(param *parameters) (err error) {
 		param.rediUri,
 		param.sigAlg,
 		errTmpl,
-		param.usessLabel,
-		param.usessLen,
-		param.usessExpIn,
-		param.usessDbExpIn,
+		param.asessLabel,
+		param.asessLen,
+		param.asessExpIn,
+		param.asessDbExpIn,
 		param.fsessLabel,
 		param.fsessLen,
 		param.fsessExpIn,
@@ -185,7 +185,7 @@ func serve(param *parameters) (err error) {
 		param.jtiExpIn,
 		keyDb,
 		idpDb,
-		usessDb,
+		asessDb,
 		tokDb,
 		idGen,
 		param.cookPath,
