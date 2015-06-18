@@ -98,9 +98,9 @@ func newCallbackRequestWithIdToken(page *Page, idp idpdb.Element, clms map[strin
 	idTok.SetClaim("exp", now.Add(time.Minute).Unix())
 	idTok.SetClaim("iat", now.Unix())
 	idTok.SetClaim("nonce", test_nonc)
-	hash, err := jwt.HashGenerator(test_idpSigAlg)
-	if err != nil {
-		return nil, erro.Wrap(err)
+	hash := jwt.HashGenerator(test_idpSigAlg)
+	if !hash.Available() {
+		return nil, erro.New("unsupported algorithm " + test_idpSigAlg)
 	}
 	idTok.SetClaim("c_hash", hashutil.Hashing(hash.New(), []byte(test_cod)))
 	for k, v := range clms {
@@ -141,9 +141,9 @@ func newTestTokenResponse(page *Page, idp idpdb.Element, clms map[string]interfa
 	idTok.SetClaim("exp", now.Add(time.Minute).Unix())
 	idTok.SetClaim("iat", now.Unix())
 	idTok.SetClaim("nonce", test_nonc)
-	hash, err := jwt.HashGenerator(test_idpSigAlg)
-	if err != nil {
-		return 0, nil, nil, erro.Wrap(err)
+	hash := jwt.HashGenerator(test_idpSigAlg)
+	if !hash.Available() {
+		return 0, nil, nil, erro.New("unsupported algorithm " + test_idpSigAlg)
 	}
 	idTok.SetClaim("at_hash", hashutil.Hashing(hash.New(), []byte(test_tok)))
 	for k, v := range clms {
