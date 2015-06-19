@@ -52,8 +52,8 @@ func newTestHandler(keys []jwk.Key, idps []idpdb.Element) *handler {
 		keydb.NewMemoryDb(keys),
 		idpdb.NewMemoryDb(idps),
 		token.NewMemoryDb(),
-		rand.New(time.Second),
-		true,
+		rand.New(time.Minute),
+		nil,
 		true,
 	).(*handler)
 }
@@ -64,7 +64,7 @@ type testIdProvider struct {
 }
 
 func newTestIdProvider(keys []jwk.Key) (*testIdProvider, error) {
-	base, err := test.NewHttpServer(time.Second)
+	base, err := test.NewHttpServer(time.Minute)
 	if err != nil {
 		return nil, erro.Wrap(err)
 	}
@@ -149,7 +149,7 @@ func TestSingleNormal(t *testing.T) {
 			t.Error(buff.Code)
 			t.Fatal(test_cod)
 		}
-	case <-time.After(time.Second):
+	case <-time.After(time.Minute):
 		t.Fatal("no request")
 	}
 
@@ -248,7 +248,7 @@ func TestDenyIdProviderError(t *testing.T) {
 
 	select {
 	case <-reqCh:
-	case <-time.After(time.Second):
+	case <-time.After(time.Minute):
 		t.Fatal("no request")
 	}
 
@@ -266,7 +266,7 @@ func TestDenyIdProviderError(t *testing.T) {
 	}
 }
 
-// 仲介コードが 1 つ以上の場合の正常系。
+// 仲介コードが 2 つ以上の場合の正常系。
 // レスポンスが X-Auth-User, X-Auth-User-Tag, X-Auth-Users, X-Auth-From-Id を含むことの検査。
 // 主体情報が iss, sub, at_tag, at_exp クレームを含むことの検査。
 // 主体でないアカウント情報が iss, sub クレームを含むことの検査。

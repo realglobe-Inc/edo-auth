@@ -17,7 +17,6 @@ package coop
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"github.com/realglobe-Inc/edo-auth/database/token"
 	keydb "github.com/realglobe-Inc/edo-id-provider/database/key"
@@ -31,7 +30,6 @@ import (
 	"github.com/realglobe-Inc/edo-lib/server"
 	"github.com/realglobe-Inc/go-lib/erro"
 	"github.com/realglobe-Inc/go-lib/rglog/level"
-	"net"
 	"net/http"
 	"time"
 )
@@ -53,9 +51,9 @@ type handler struct {
 	idpDb idpdb.Db
 	tokDb token.Db
 	idGen rand.Generator
+	tr    http.RoundTripper
 
-	noVeri bool
-	debug  bool
+	debug bool
 }
 
 func New(
@@ -72,7 +70,7 @@ func New(
 	idpDb idpdb.Db,
 	tokDb token.Db,
 	idGen rand.Generator,
-	noVeri bool,
+	tr http.RoundTripper,
 	debug bool,
 ) http.Handler {
 	return &handler{
@@ -89,28 +87,13 @@ func New(
 		idpDb:      idpDb,
 		tokDb:      tokDb,
 		idGen:      idGen,
-		noVeri:     noVeri,
+		tr:         tr,
 		debug:      debug,
 	}
 }
 
-// http.DefaultTransport を参考にした。
-var noVeriTr = &http.Transport{
-	Proxy: http.ProxyFromEnvironment,
-	Dial: (&net.Dialer{
-		Timeout:   30 * time.Second,
-		KeepAlive: 30 * time.Second,
-	}).Dial,
-	TLSHandshakeTimeout: 10 * time.Second,
-	TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
-}
-
 func (this *handler) httpClient() *http.Client {
-	if this.noVeri {
-		return &http.Client{Transport: noVeriTr}
-	} else {
-		return &http.Client{}
-	}
+	return &http.Client{Transport: this.tr}
 }
 
 func (this *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
