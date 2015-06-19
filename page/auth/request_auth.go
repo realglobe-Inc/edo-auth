@@ -40,8 +40,8 @@ func parseAuthRequest(r *http.Request) (req *authRequest, err error) {
 		path += "?" + r.URL.RawQuery
 	}
 	return &authRequest{
-		authUri_: authUri,
-		path_:    path,
+		authUri,
+		path,
 	}, nil
 }
 
