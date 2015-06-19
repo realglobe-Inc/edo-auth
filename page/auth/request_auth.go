@@ -15,20 +15,17 @@
 package auth
 
 import (
-	"github.com/realglobe-Inc/edo-idp-selector/request"
 	"github.com/realglobe-Inc/go-lib/erro"
 	"net/http"
 	"net/url"
 )
 
 type authRequest struct {
-	*request.Request
-
 	authUri_ *url.URL
 	path_    string
 }
 
-func parseAuthRequest(r *http.Request, base *request.Request) (req *authRequest, err error) {
+func parseAuthRequest(r *http.Request) (req *authRequest, err error) {
 	var authUri *url.URL
 	if rawAuthUri := r.Header.Get(tagX_auth_uri); rawAuthUri == "" {
 		return nil, erro.New("no authentication uri")
@@ -43,7 +40,6 @@ func parseAuthRequest(r *http.Request, base *request.Request) (req *authRequest,
 		path += "?" + r.URL.RawQuery
 	}
 	return &authRequest{
-		Request:  base,
 		authUri_: authUri,
 		path_:    path,
 	}, nil

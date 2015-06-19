@@ -120,13 +120,20 @@ func (this *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Info(sender, ": Received cooperation request")
 	defer log.Info(sender, ": Handled cooperation request")
 
-	if err := this.serve(w, r, sender); err != nil {
+	if err := (&environment{this, sender}).serve(w, r); err != nil {
 		idperr.RespondJson(w, r, erro.Wrap(err), sender)
 		return
 	}
 }
 
-func (this *handler) serve(w http.ResponseWriter, r *http.Request, sender *requtil.Request) error {
+// environment のメソッドは idperr.Error を返す。
+type environment struct {
+	*handler
+
+	sender *requtil.Request
+}
+
+func (this *environment) serve(w http.ResponseWriter, r *http.Request) error {
 	req, err := parseRequest(r)
 	if err != nil {
 		return erro.Wrap(idperr.New(idperr.Invalid_request, erro.Unwrap(err).Error(), http.StatusBadRequest, err))
@@ -153,7 +160,7 @@ func (this *handler) serve(w http.ResponseWriter, r *http.Request, sender *requt
 				return erro.Wrap(idperr.New(idperr.Invalid_request, "two main account tags", http.StatusBadRequest, nil))
 			}
 			acntTag = codTok.accountTag()
-			log.Debug(sender, ": Main account tag is "+acntTag)
+			log.Debug(this.sender, ": Main account tag is "+acntTag)
 		}
 
 		for tag := range codTok.accountTags() {
@@ -161,7 +168,7 @@ func (this *handler) serve(w http.ResponseWriter, r *http.Request, sender *requt
 				return erro.Wrap(idperr.New(idperr.Invalid_request, "tag "+tag+" overlaps", http.StatusBadRequest, nil))
 			}
 			tags[tag] = true
-			log.Debug(sender, ": Account tag is "+tag)
+			log.Debug(this.sender, ": Account tag is "+tag)
 		}
 
 		if codTok.referralHash() != "" {
@@ -179,13 +186,13 @@ func (this *handler) serve(w http.ResponseWriter, r *http.Request, sender *requt
 			return erro.Wrap(idperr.New(idperr.Invalid_request, "ID provider "+codTok.idProvider()+" is not exist", http.StatusBadRequest, nil))
 		}
 
-		log.Debug(sender, ": ID provider "+idp.Id()+" is exist")
+		log.Debug(this.sender, ": ID provider "+idp.Id()+" is exist")
 
 		if err := codTok.verify(idp.Keys()); err != nil {
 			return erro.Wrap(idperr.New(idperr.Invalid_request, erro.Unwrap(err).Error(), http.StatusBadRequest, err))
 		}
 
-		log.Debug(sender, ": Verified cooperation code")
+		log.Debug(this.sender, ": Verified cooperation code")
 
 		units = append(units, &idpUnit{idp, codTok})
 	}
@@ -193,7 +200,7 @@ func (this *handler) serve(w http.ResponseWriter, r *http.Request, sender *requt
 		return erro.Wrap(idperr.New(idperr.Invalid_request, "no main account tag", http.StatusBadRequest, nil))
 	}
 
-	log.Debug(sender, ": Cooperation codes are OK")
+	log.Debug(this.sender, ": Cooperation codes are OK")
 
 	var tok *token.Element
 	var mainAttrs map[string]interface{}
@@ -203,17 +210,17 @@ func (this *handler) serve(w http.ResponseWriter, r *http.Request, sender *requt
 		var tToA map[string]map[string]interface{}
 		var fT string
 		if unit.codTok.accountTag() != "" {
-			fT, tok, tToA, err = this.getInfoFromMainIdProvider(unit.idp, unit.codTok, sender)
+			fT, tok, tToA, err = this.getInfoFromMainIdProvider(unit.idp, unit.codTok)
 			if err != nil {
 				return erro.Wrap(err)
 			}
-			log.Debug(sender, ": Got account info from main ID provider "+unit.idp.Id())
+			log.Debug(this.sender, ": Got account info from main ID provider "+unit.idp.Id())
 		} else {
-			fT, tToA, err = this.getInfoFromSubIdProvider(unit.idp, unit.codTok, sender)
+			fT, tToA, err = this.getInfoFromSubIdProvider(unit.idp, unit.codTok)
 			if err != nil {
 				return erro.Wrap(err)
 			}
-			log.Debug(sender, ": Got account info from sub ID provider "+unit.idp.Id())
+			log.Debug(this.sender, ": Got account info from sub ID provider "+unit.idp.Id())
 		}
 		for tag, attrs := range tToA {
 			if tag == acntTag {
@@ -233,7 +240,7 @@ func (this *handler) serve(w http.ResponseWriter, r *http.Request, sender *requt
 		}
 	}
 
-	log.Debug(sender, ": Got all account info")
+	log.Debug(this.sender, ": Got all account info")
 
 	jt := jwt.New()
 	jt.SetHeader(tagAlg, tagNone)
@@ -268,16 +275,16 @@ func (this *handler) serve(w http.ResponseWriter, r *http.Request, sender *requt
 	return nil
 }
 
-func (this *handler) getInfoFromMainIdProvider(idp idpdb.Element, codTok *codeToken, sender *requtil.Request) (frTa string, tok *token.Element, tagToAttrs map[string]map[string]interface{}, err error) {
-	return this.getInfo(true, idp, codTok, sender)
+func (this *environment) getInfoFromMainIdProvider(idp idpdb.Element, codTok *codeToken) (frTa string, tok *token.Element, tagToAttrs map[string]map[string]interface{}, err error) {
+	return this.getInfo(true, idp, codTok)
 }
 
-func (this *handler) getInfoFromSubIdProvider(idp idpdb.Element, codTok *codeToken, sender *requtil.Request) (frTa string, tagToAttrs map[string]map[string]interface{}, err error) {
-	frTa, _, tagToAttrs, err = this.getInfo(false, idp, codTok, sender)
+func (this *environment) getInfoFromSubIdProvider(idp idpdb.Element, codTok *codeToken) (frTa string, tagToAttrs map[string]map[string]interface{}, err error) {
+	frTa, _, tagToAttrs, err = this.getInfo(false, idp, codTok)
 	return frTa, tagToAttrs, err
 }
 
-func (this *handler) getInfo(isMain bool, idp idpdb.Element, codTok *codeToken, sender *requtil.Request) (frTa string, tok *token.Element, tagToAttrs map[string]map[string]interface{}, err error) {
+func (this *environment) getInfo(isMain bool, idp idpdb.Element, codTok *codeToken) (frTa string, tok *token.Element, tagToAttrs map[string]map[string]interface{}, err error) {
 	params := map[string]interface{}{}
 
 	// grant_type
@@ -302,7 +309,7 @@ func (this *handler) getInfo(isMain bool, idp idpdb.Element, codTok *codeToken, 
 	if err != nil {
 		return "", nil, nil, erro.Wrap(err)
 	}
-	ass, err := this.makeAssertion(keys, idp.CoopToUri())
+	ass, err := makeAssertion(this.handler, keys, idp.CoopToUri())
 	if err != nil {
 		return "", nil, nil, erro.Wrap(err)
 	}
@@ -315,7 +322,7 @@ func (this *handler) getInfo(isMain bool, idp idpdb.Element, codTok *codeToken, 
 
 	r, err := http.NewRequest("POST", idp.CoopToUri(), bytes.NewReader(data))
 	r.Header.Set(tagContent_type, contTypeJson)
-	log.Debug(sender, ": Made main cooperation-to request")
+	log.Debug(this.sender, ": Made main cooperation-to request")
 
 	server.LogRequest(level.DEBUG, r, this.debug)
 	resp, err := this.httpClient().Do(r)
@@ -353,30 +360,30 @@ func (this *handler) getInfo(isMain bool, idp idpdb.Element, codTok *codeToken, 
 		}
 		now := time.Now()
 		tok = token.New(coopResp.token(), this.idGen.String(this.tokTagLen), now.Add(coopResp.expiresIn()), idsTok.idProvider(), coopResp.scope())
-		log.Info(sender, ": Got access token "+logutil.Mosaic(tok.Id()))
+		log.Info(this.sender, ": Got access token "+logutil.Mosaic(tok.Id()))
 
 		if err := this.tokDb.Save(tok, now.Add(this.tokDbExpIn)); err != nil {
 			return "", nil, nil, erro.Wrap(err)
 		}
-		log.Info(sender, ": Saved access token "+logutil.Mosaic(tok.Id()))
+		log.Info(this.sender, ": Saved access token "+logutil.Mosaic(tok.Id()))
 	}
 
 	return idsTok.fromTa(), tok, idsTok.attributes(), nil
 }
 
 // TA 認証用署名をつくる。
-func (this *handler) makeAssertion(keys []jwk.Key, aud string) ([]byte, error) {
+func makeAssertion(hndl *handler, keys []jwk.Key, aud string) ([]byte, error) {
 	ass := jwt.New()
-	ass.SetHeader(tagAlg, this.sigAlg)
-	if this.sigKid != "" {
-		ass.SetHeader(tagKid, this.sigKid)
+	ass.SetHeader(tagAlg, hndl.sigAlg)
+	if hndl.sigKid != "" {
+		ass.SetHeader(tagKid, hndl.sigKid)
 	}
-	ass.SetClaim(tagIss, this.selfId)
-	ass.SetClaim(tagSub, this.selfId)
+	ass.SetClaim(tagIss, hndl.selfId)
+	ass.SetClaim(tagSub, hndl.selfId)
 	ass.SetClaim(tagAud, aud)
-	ass.SetClaim(tagJti, this.idGen.String(this.jtiLen))
+	ass.SetClaim(tagJti, hndl.idGen.String(hndl.jtiLen))
 	now := time.Now()
-	ass.SetClaim(tagExp, now.Add(this.jtiExpIn).Unix())
+	ass.SetClaim(tagExp, now.Add(hndl.jtiExpIn).Unix())
 	ass.SetClaim(tagIat, now.Unix())
 	if err := ass.Sign(keys); err != nil {
 		return nil, erro.Wrap(err)
