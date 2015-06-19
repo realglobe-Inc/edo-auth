@@ -266,7 +266,7 @@ func TestDenyIdProviderError(t *testing.T) {
 	}
 }
 
-// 仲介コードが 1 つ以上の場合の正常系。
+// 仲介コードが 2 つ以上の場合の正常系。
 // レスポンスが X-Auth-User, X-Auth-User-Tag, X-Auth-Users, X-Auth-From-Id を含むことの検査。
 // 主体情報が iss, sub, at_tag, at_exp クレームを含むことの検査。
 // 主体でないアカウント情報が iss, sub クレームを含むことの検査。
