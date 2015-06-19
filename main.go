@@ -15,9 +15,10 @@
 package main
 
 import (
+	"crypto/tls"
 	"github.com/realglobe-Inc/edo-auth/api/coop"
-	"github.com/realglobe-Inc/edo-auth/database/token"
 	"github.com/realglobe-Inc/edo-auth/database/asession"
+	"github.com/realglobe-Inc/edo-auth/database/token"
 	authpage "github.com/realglobe-Inc/edo-auth/page/auth"
 	keydb "github.com/realglobe-Inc/edo-id-provider/database/key"
 	idpdb "github.com/realglobe-Inc/edo-idp-selector/database/idp"
@@ -29,6 +30,7 @@ import (
 	"github.com/realglobe-Inc/go-lib/erro"
 	"github.com/realglobe-Inc/go-lib/rglog"
 	"html/template"
+	"net"
 	"net/http"
 	"os"
 	"time"
@@ -158,6 +160,20 @@ func serve(param *parameters) (err error) {
 
 	idGen := rand.New(time.Minute)
 
+	var tr http.RoundTripper
+	if param.noVeri {
+		// http.DefaultTransport を参考にした。
+		tr = &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			Dial: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).Dial,
+			TLSHandshakeTimeout: 10 * time.Second,
+			TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
+		}
+	}
+
 	// バックエンドの準備完了。
 
 	if param.debug {
@@ -217,7 +233,7 @@ func serve(param *parameters) (err error) {
 		idpDb,
 		tokDb,
 		idGen,
-		param.noVeri,
+		tr,
 		param.debug,
 	))
 	routes[param.pathCoop] = true
