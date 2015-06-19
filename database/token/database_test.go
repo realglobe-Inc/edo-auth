@@ -27,7 +27,7 @@ func testDb(t *testing.T, db Db) {
 		t.Fatal(elem)
 	}
 
-	exp := time.Now().Add(time.Second)
+	exp := time.Now().Add(time.Minute)
 	elem := New(test_id, test_tag, exp, test_idp, test_scop)
 	saveExp := exp.Add(time.Minute)
 

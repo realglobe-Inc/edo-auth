@@ -52,7 +52,7 @@ func newTestHandler(keys []jwk.Key, idps []idpdb.Element) *handler {
 		keydb.NewMemoryDb(keys),
 		idpdb.NewMemoryDb(idps),
 		token.NewMemoryDb(),
-		rand.New(time.Second),
+		rand.New(time.Minute),
 		true,
 		true,
 	).(*handler)
@@ -64,7 +64,7 @@ type testIdProvider struct {
 }
 
 func newTestIdProvider(keys []jwk.Key) (*testIdProvider, error) {
-	base, err := test.NewHttpServer(time.Second)
+	base, err := test.NewHttpServer(time.Minute)
 	if err != nil {
 		return nil, erro.Wrap(err)
 	}
@@ -149,7 +149,7 @@ func TestSingleNormal(t *testing.T) {
 			t.Error(buff.Code)
 			t.Fatal(test_cod)
 		}
-	case <-time.After(time.Second):
+	case <-time.After(time.Minute):
 		t.Fatal("no request")
 	}
 
@@ -248,7 +248,7 @@ func TestDenyIdProviderError(t *testing.T) {
 
 	select {
 	case <-reqCh:
-	case <-time.After(time.Second):
+	case <-time.After(time.Minute):
 		t.Fatal("no request")
 	}
 

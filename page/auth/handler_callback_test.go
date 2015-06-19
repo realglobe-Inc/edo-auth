@@ -44,7 +44,7 @@ type testIdProvider struct {
 }
 
 func newTestIdProvider(keys []jwk.Key) (*testIdProvider, error) {
-	base, err := test.NewHttpServer(time.Second)
+	base, err := test.NewHttpServer(time.Minute)
 	if err != nil {
 		return nil, erro.Wrap(err)
 	}
@@ -177,7 +177,7 @@ func TestCallback(t *testing.T) {
 			t.Error(buff.Iat)
 			t.Fatal(buff.Exp)
 		}
-	case <-time.After(time.Second):
+	case <-time.After(time.Minute):
 		t.Fatal("no request")
 	}
 
@@ -193,7 +193,7 @@ func TestCallback(t *testing.T) {
 			t.Error(auth[1])
 			t.Fatal(test_tok)
 		}
-	case <-time.After(time.Second):
+	case <-time.After(time.Minute):
 		t.Fatal("no request")
 	}
 

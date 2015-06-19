@@ -15,8 +15,8 @@
 package auth
 
 import (
-	"github.com/realglobe-Inc/edo-auth/database/token"
 	"github.com/realglobe-Inc/edo-auth/database/asession"
+	"github.com/realglobe-Inc/edo-auth/database/token"
 	keydb "github.com/realglobe-Inc/edo-id-provider/database/key"
 	idpdb "github.com/realglobe-Inc/edo-idp-selector/database/idp"
 	"github.com/realglobe-Inc/edo-lib/jwk"
@@ -49,7 +49,7 @@ func newTestPage(keys []jwk.Key, idps []idpdb.Element) *Page {
 		idpdb.NewMemoryDb(idps),
 		asession.NewMemoryDb(),
 		token.NewMemoryDb(),
-		rand.New(time.Second),
+		rand.New(time.Minute),
 		"/",
 		false,
 		true,
