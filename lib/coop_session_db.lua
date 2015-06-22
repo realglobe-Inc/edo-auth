@@ -47,7 +47,7 @@ local db_redis = {
       if err then
          return nil, err
       end
-      return session.new(id, obj.user, obj.user_tag, obj.from_ta)
+      return session.new(id, obj.user, obj.user_tag, obj.from_ta, obj.users)
    end,
 
    -- 保存。
@@ -56,12 +56,17 @@ local db_redis = {
          return
       end
 
-      local buff, err = cjson.encode({
+      local raw = {
             ["id"] = sess:get_id(),
             ["user"] = sess:get_account(),
             ["user_tag"] = sess:get_account_tag(),
             ["from_ta"] = sess:get_from_ta(),
-      })
+      }
+      local acnts = sess:get_accounts()
+      if acnts then
+         raw["users"] = acnts
+      end
+      local buff, err = cjson.encode(raw)
       if err then
          return err
       end

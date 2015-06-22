@@ -23,7 +23,7 @@ local session = {
       return self.id
    end,
 
-   -- アカウント情報を返す。
+   -- 主体の情報を返す。
    get_account = function(self)
       return self.acnt
    end,
@@ -37,6 +37,11 @@ local session = {
    get_from_ta = function(self)
       return self.from_ta
    end,
+
+   -- 主体でないアカウントの情報を返す。
+   get_accounts = function(self)
+      return self.acnts
+   end,
 }
 
 local equal = function(o1, o2)
@@ -44,15 +49,17 @@ local equal = function(o1, o2)
       and o1.acnt == o2.acnt
       and o1.acnt_tag == o2.acnt_tag
       and o1.from_ta == o2.from_ta
+      and o1.acnts == o2.acnts
 end
 
 -- 指定した ID とアカウント情報でユーザーセッションを作成する。
-local new = function(id, acnt, acnt_tag, from_ta)
+local new = function(id, acnt, acnt_tag, from_ta, acnts)
    local obj = {
       id = id,
       acnt = acnt,
       acnt_tag = acnt_tag,
       from_ta = from_ta,
+      acnts = acnts,
    }
    setmetatable(obj, {
                    __index = session,
