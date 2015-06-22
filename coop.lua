@@ -160,7 +160,8 @@ if accounts_info then
    ngx.req.set_header("X-Auth-Users", accounts_info)
 end
 
-local session_id, session_exp_in = get_session(resp.header["Set-Cookie"])
+local session_cookie = resp.header["Set-Cookie"]
+local session_id, session_exp_in = get_session(session_cookie)
 if session_id and session_exp_in and session_exp_in > 0 then
    -- セッションが宣言された。
    ngx.log(log_level, "TA session is declared")
@@ -175,5 +176,8 @@ if session_id and session_exp_in and session_exp_in > 0 then
    if err then
       return erro.respond_json({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "database error: " .. err})
    end
+
    ngx.log(log_level, "saved account info")
+
+   ngx.header["Set-Cookie"] = session_cookie
 end
