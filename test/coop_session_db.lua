@@ -27,7 +27,7 @@ local client, err = redis_wrapper.new(ngx.var.redis_host, ngx.var.redis_port, 10
 if err then
    return test.response_error("redis_wrapper.new failed: " .. err)
 end
-local prefix = "edo-auth.usession:"
+local prefix = "edo-auth.asession:"
 local db, err = session_db.new_redis(client, prefix)
 if err then
    return test.response_error("new failed: " .. err)
