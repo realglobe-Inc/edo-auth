@@ -28,6 +28,7 @@ import (
 	logutil "github.com/realglobe-Inc/edo-lib/log"
 	"github.com/realglobe-Inc/edo-lib/rand"
 	"github.com/realglobe-Inc/edo-lib/server"
+	"github.com/realglobe-Inc/edo-lib/strset/strsetutil"
 	"github.com/realglobe-Inc/go-lib/erro"
 	"github.com/realglobe-Inc/go-lib/rglog/level"
 	"net/http"
@@ -42,6 +43,7 @@ type handler struct {
 	sigKid string
 
 	sessLabel  string
+	sessLen    int
 	tokTagLen  int
 	tokDbExpIn time.Duration
 	jtiLen     int
@@ -53,7 +55,9 @@ type handler struct {
 	idGen rand.Generator
 	tr    http.RoundTripper
 
-	debug bool
+	cookPath string
+	cookSec  bool
+	debug    bool
 }
 
 func New(
@@ -62,6 +66,7 @@ func New(
 	sigAlg string,
 	sigKid string,
 	sessLabel string,
+	sessLen int,
 	tokTagLen int,
 	tokDbExpIn time.Duration,
 	jtiLen int,
@@ -71,6 +76,8 @@ func New(
 	tokDb token.Db,
 	idGen rand.Generator,
 	tr http.RoundTripper,
+	cookPath string,
+	cookSec bool,
 	debug bool,
 ) http.Handler {
 	return &handler{
@@ -79,6 +86,7 @@ func New(
 		sigAlg,
 		sigKid,
 		sessLabel,
+		sessLen,
 		tokTagLen,
 		tokDbExpIn,
 		jtiLen,
@@ -88,12 +96,25 @@ func New(
 		tokDb,
 		idGen,
 		tr,
+		cookPath,
+		cookSec,
 		debug,
 	}
 }
 
 func (this *handler) httpClient() *http.Client {
 	return &http.Client{Transport: this.tr}
+}
+
+func (this *handler) newCookie(id string, exp time.Time) *http.Cookie {
+	return &http.Cookie{
+		Name:     this.sessLabel,
+		Value:    id,
+		Path:     this.cookPath,
+		Expires:  exp,
+		Secure:   this.cookSec,
+		HttpOnly: true,
+	}
 }
 
 func (this *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -253,11 +274,19 @@ func (this *environment) serve(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	var relInfo []byte
+	sessFlag := true
 	if len(tagToAttrs) > 0 {
 		jt = jwt.New()
 		jt.SetHeader(tagAlg, tagNone)
-		for k, v := range tagToAttrs {
-			jt.SetClaim(k, v)
+		for acntTag, attrs := range tagToAttrs {
+			jt.SetClaim(acntTag, attrs)
+			if sessFlag {
+				for k := range attrs {
+					if !sessionEnable(k) {
+						sessFlag = false
+					}
+				}
+			}
 		}
 		relInfo, err = jt.Encode()
 		if err != nil {
@@ -271,7 +300,11 @@ func (this *environment) serve(w http.ResponseWriter, r *http.Request) error {
 	if relInfo != nil {
 		w.Header().Set(tagX_auth_users, string(relInfo))
 	}
-
+	if sessFlag {
+		sessId := this.idGen.String(this.sessLen)
+		http.SetCookie(w, this.handler.newCookie(sessId, tok.Expires()))
+		log.Debug(this.sender, ": Report session "+logutil.Mosaic(sessId))
+	}
 	return nil
 }
 
@@ -395,3 +428,13 @@ func makeAssertion(hndl *handler, keys []jwk.Key, aud string) ([]byte, error) {
 
 	return data, nil
 }
+
+// セッションを発行しても良い属性かどうか。
+func sessionEnable(attrName string) bool {
+	return sessEnAttrs[attrName]
+}
+
+var sessEnAttrs = strsetutil.New(
+	tagIss,
+	tagSub,
+)

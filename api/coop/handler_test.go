@@ -45,6 +45,7 @@ func newTestHandler(keys []jwk.Key, idps []idpdb.Element) *handler {
 		test_toTaSigAlg,
 		"",
 		"Edo-Cooperation",
+		30,
 		10,
 		time.Hour,
 		10,
@@ -54,6 +55,8 @@ func newTestHandler(keys []jwk.Key, idps []idpdb.Element) *handler {
 		token.NewMemoryDb(),
 		rand.New(time.Minute),
 		nil,
+		"/",
+		false,
 		true,
 	).(*handler)
 }

@@ -77,6 +77,7 @@ type parameters struct {
 	fsessExpIn time.Duration
 	// TA 間連携セッション。
 	csessLabel string
+	csessLen   int
 	// 認証パラメータ。
 	statLen int
 	noncLen int
@@ -185,6 +186,7 @@ func parseParameters(args ...string) (param *parameters, err error) {
 	flags.IntVar(&param.fsessLen, "fsessLen", 30, "Frontend session ID length")
 	flags.DurationVar(&param.fsessExpIn, "fsessExpIn", 7*24*time.Hour, "Frontend session expiration duration")
 	flags.StringVar(&param.csessLabel, "csessLabel", "Edo-Cooperation", "Cooperation session ID label")
+	flags.IntVar(&param.csessLen, "csessLen", 30, "Cooperation session ID length")
 	flags.IntVar(&param.statLen, "statLen", 10, "state parameter length")
 	flags.IntVar(&param.noncLen, "noncLen", 10, "nonce parameter length")
 	flags.IntVar(&param.tokTagLen, "tokTagLen", 10, "Token tag length")
