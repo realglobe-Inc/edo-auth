@@ -116,7 +116,7 @@ func (this *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	server.LogRequest(level.DEBUG, r, this.debug)
 	//////////////////////////////
 
-	sender = requtil.Parse(r, this.sessLabel)
+	sender = requtil.Parse(r, "")
 	log.Info(sender, ": Received cooperation request")
 	defer log.Info(sender, ": Handled cooperation request")
 
