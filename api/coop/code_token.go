@@ -30,6 +30,7 @@ type codeToken struct {
 	idp      string
 	cod      string
 	aud      map[string]bool
+	frTa     string
 	acntTag  string
 	acntTags map[string]bool
 	refHash  string
@@ -44,6 +45,7 @@ func parseCodeToken(raw []byte) (*codeToken, error) {
 		Idp      string            `json:"iss"`
 		Cod      string            `json:"sub"`
 		Aud      audience.Audience `json:"aud"`
+		FrTa     string            `json:"from_client"`
 		AcntTag  string            `json:"user_tag"`
 		AcntTags strset.Set        `json:"user_tags"`
 		RefHash  string            `json:"ref_hash"`
@@ -63,6 +65,7 @@ func parseCodeToken(raw []byte) (*codeToken, error) {
 		idp:      buff.Idp,
 		cod:      buff.Cod,
 		aud:      buff.Aud,
+		frTa:     buff.FrTa,
 		acntTag:  buff.AcntTag,
 		acntTags: buff.AcntTags,
 		refHash:  buff.RefHash,
@@ -79,6 +82,10 @@ func (this *codeToken) idProvider() string {
 
 func (this *codeToken) audience() map[string]bool {
 	return this.aud
+}
+
+func (this *codeToken) fromTa() string {
+	return this.frTa
 }
 
 func (this *codeToken) referralHash() string {

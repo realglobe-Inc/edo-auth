@@ -182,6 +182,10 @@ func (this *environment) serve(w http.ResponseWriter, r *http.Request) error {
 			}
 			acntTag = codTok.accountTag()
 			log.Debug(this.sender, ": Main account tag is "+acntTag)
+			if codTok.fromTa() == "" {
+				return erro.Wrap(idperr.New(idperr.Invalid_request, "no from-TA in main token", http.StatusBadRequest, nil))
+			}
+			log.Debug(this.sender, ": From-TA is "+codTok.fromTa())
 		}
 
 		for tag := range codTok.accountTags() {
