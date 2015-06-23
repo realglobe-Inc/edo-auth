@@ -115,6 +115,10 @@ func newTestSingleIdpResponse(hndl *handler, idp idpdb.Element) (status int, hea
 	return newTestMainIdpResponse(hndl, idp)
 }
 
+func newTestSingleIdpResponseWithParams(hndl *handler, idp idpdb.Element, params, idsTokParams map[string]interface{}) (status int, header http.Header, body []byte, err error) {
+	return newTestMainIdpResponseWithParams(hndl, idp, params, idsTokParams)
+}
+
 // コードトークン 2 つ以上のリクエスト。
 func newTestRequest(hndl *handler, idp, subIdp idpdb.Element) (*http.Request, error) {
 	return newTestRequestWithParams(hndl, idp, subIdp, nil, nil)

@@ -772,3 +772,207 @@ func TestSession(t *testing.T) {
 		t.Fatal("no session")
 	}
 }
+
+// ID プロバイダからアクセストークンが帰って来なかったら拒否できること検査。
+func TestDenyNoAccessTokenFromIdProvider(t *testing.T) {
+	// ////////////////////////////////
+	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
+	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// ////////////////////////////////
+
+	testDenyNoSomethingFromIdProvider(t, "access_token", "")
+}
+
+// ID プロバイダから ids_token が帰って来なかったら拒否できること検査。
+func TestDenyNoIdsTokenFromIdProvider(t *testing.T) {
+	// ////////////////////////////////
+	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
+	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// ////////////////////////////////
+
+	testDenyNoSomethingFromIdProvider(t, "ids_token", "")
+}
+
+// ID プロバイダから ids_token の iss が帰って来なかったら拒否できること検査。
+func TestDenyNoIdsTokenIssFromIdProvider(t *testing.T) {
+	// ////////////////////////////////
+	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
+	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// ////////////////////////////////
+
+	testDenyNoSomethingFromIdProvider(t, "", "iss")
+}
+
+// ID プロバイダから ids_token の sub が帰って来なかったら拒否できること検査。
+func TestDenyNoIdsTokenSubFromIdProvider(t *testing.T) {
+	// ////////////////////////////////
+	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
+	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// ////////////////////////////////
+
+	testDenyNoSomethingFromIdProvider(t, "", "sub")
+}
+
+// ID プロバイダから ids_token の aud が帰って来なかったら拒否できること検査。
+func TestDenyNoIdsTokenAudFromIdProvider(t *testing.T) {
+	// ////////////////////////////////
+	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
+	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// ////////////////////////////////
+
+	testDenyNoSomethingFromIdProvider(t, "", "aud")
+}
+
+// ID プロバイダから ids_token の exp が帰って来なかったら拒否できること検査。
+func TestDenyNoIdsTokenExpFromIdProvider(t *testing.T) {
+	// ////////////////////////////////
+	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
+	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// ////////////////////////////////
+
+	testDenyNoSomethingFromIdProvider(t, "", "exp")
+}
+
+// ID プロバイダから ids_token の iat が帰って来なかったら拒否できること検査。
+func TestDenyNoIdsTokenIatFromIdProvider(t *testing.T) {
+	// ////////////////////////////////
+	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
+	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// ////////////////////////////////
+
+	testDenyNoSomethingFromIdProvider(t, "", "iat")
+}
+
+// ID プロバイダから ids_token の ids が帰って来なかったら拒否できること検査。
+func TestDenyNoIdsTokenIdsFromIdProvider(t *testing.T) {
+	// ////////////////////////////////
+	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
+	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// ////////////////////////////////
+
+	testDenyNoSomethingFromIdProvider(t, "", "ids")
+}
+
+func testDenyNoSomethingFromIdProvider(t *testing.T, something1, something2 string) {
+	idpServ, err := newTestIdProvider([]jwk.Key{test_idpKey})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer idpServ.close()
+	idp := idpServ.info()
+	hndl := newTestHandler([]jwk.Key{test_toTaKey}, []idpdb.Element{idp})
+
+	r, err := newTestSingleRequest(hndl, idp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s, h, b, err := newTestSingleIdpResponseWithParams(hndl, idp, map[string]interface{}{something1: nil}, map[string]interface{}{something2: nil})
+	if err != nil {
+		t.Fatal(err)
+	}
+	idpServ.addResponse(s, h, b)
+
+	w := httptest.NewRecorder()
+	hndl.ServeHTTP(w, r)
+
+	if w.Code != http.StatusForbidden {
+		t.Error(w.Code)
+		t.Fatal(http.StatusForbidden)
+	}
+	var buff struct{ Error string }
+	if err := json.NewDecoder(w.Body).Decode(&buff); err != nil {
+		t.Fatal(err)
+	} else if err := "access_denied"; buff.Error != err {
+		t.Error(buff.Error)
+		t.Fatal(err)
+	}
+}
+
+// ID プロバイダから要求した主体の情報が帰って来なかったら拒否できること検査。
+func TestDenyNoMainAccountFromIdProvider(t *testing.T) {
+	idpServ, err := newTestIdProvider([]jwk.Key{test_idpKey})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer idpServ.close()
+	idp := idpServ.info()
+	hndl := newTestHandler([]jwk.Key{test_toTaKey}, []idpdb.Element{idp})
+
+	r, err := newTestSingleRequest(hndl, idp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s, h, b, err := newTestSingleIdpResponseWithParams(hndl, idp, nil, map[string]interface{}{
+		"ids": map[string]map[string]interface{}{
+			test_subAcnt1Tag: {
+				"sub":   test_subAcnt1Id,
+				"email": test_subAcnt1Email,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	idpServ.addResponse(s, h, b)
+
+	w := httptest.NewRecorder()
+	hndl.ServeHTTP(w, r)
+
+	if w.Code != http.StatusForbidden {
+		t.Error(w.Code)
+		t.Fatal(http.StatusForbidden)
+	}
+	var buff struct{ Error string }
+	if err := json.NewDecoder(w.Body).Decode(&buff); err != nil {
+		t.Fatal(err)
+	} else if err := "access_denied"; buff.Error != err {
+		t.Error(buff.Error)
+		t.Fatal(err)
+	}
+}
+
+// ID プロバイダから要求した主体でないアカウント情報が帰って来なかったら拒否できること検査。
+func TestDenyNoSubAccountFromIdProvider(t *testing.T) {
+	idpServ, err := newTestIdProvider([]jwk.Key{test_idpKey})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer idpServ.close()
+	idp := idpServ.info()
+	hndl := newTestHandler([]jwk.Key{test_toTaKey}, []idpdb.Element{idp})
+
+	r, err := newTestSingleRequest(hndl, idp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s, h, b, err := newTestSingleIdpResponseWithParams(hndl, idp, nil, map[string]interface{}{
+		"ids": map[string]map[string]interface{}{
+			test_acntTag: {
+				"sub":   test_acntId,
+				"email": test_acntEmail,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	idpServ.addResponse(s, h, b)
+
+	w := httptest.NewRecorder()
+	hndl.ServeHTTP(w, r)
+
+	if w.Code != http.StatusForbidden {
+		t.Error(w.Code)
+		t.Fatal(http.StatusForbidden)
+	}
+	var buff struct{ Error string }
+	if err := json.NewDecoder(w.Body).Decode(&buff); err != nil {
+		t.Fatal(err)
+	} else if err := "access_denied"; buff.Error != err {
+		t.Error(buff.Error)
+		t.Fatal(err)
+	}
+}
