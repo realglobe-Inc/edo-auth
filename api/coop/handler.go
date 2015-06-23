@@ -186,6 +186,8 @@ func (this *environment) serve(w http.ResponseWriter, r *http.Request) error {
 				return erro.Wrap(idperr.New(idperr.Invalid_request, "no from-TA in main token", http.StatusBadRequest, nil))
 			}
 			log.Debug(this.sender, ": From-TA is "+codTok.fromTa())
+		} else if len(codTok.accountTags()) == 0 {
+			return erro.Wrap(idperr.New(idperr.Invalid_request, "no account tags in sub token", http.StatusBadRequest, nil))
 		}
 
 		for tag := range codTok.accountTags() {
