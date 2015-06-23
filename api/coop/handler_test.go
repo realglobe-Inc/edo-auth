@@ -30,6 +30,7 @@ import (
 	"github.com/realglobe-Inc/go-lib/rglog/level"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"testing"
 	"time"
 )
@@ -441,5 +442,537 @@ func TestMultiNormal(t *testing.T) {
 	} else if subAcnt2.Email != test_subAcnt2Email {
 		t.Error(subAcnt2.Email)
 		t.Fatal(test_subAcnt2Email)
+	}
+}
+
+// 仲介データの JWT の署名がおかしかったらエラーを返すことの検査。
+func TestDenyInvalidSign(t *testing.T) {
+	// ////////////////////////////////
+	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
+	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// ////////////////////////////////
+
+	idpServ, err := newTestIdProvider([]jwk.Key{test_idpKey})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer idpServ.close()
+	idp := idpServ.info()
+	hndl := newTestHandler([]jwk.Key{test_toTaKey}, []idpdb.Element{idp})
+
+	r, err := newTestSingleRequest(hndl, idp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.Header.Set("X-Edo-Code-Tokens", regexp.MustCompile("\\.[^.]+$").ReplaceAllString(r.Header.Get("X-Edo-Code-Tokens"), ".AAAA"))
+
+	s, h, b, err := newTestSingleIdpResponse(hndl, idp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	idpServ.addResponse(s, h, b)
+
+	w := httptest.NewRecorder()
+	hndl.ServeHTTP(w, r)
+
+	if w.Code != http.StatusBadRequest {
+		t.Error(w.Code)
+		t.Fatal(http.StatusBadRequest)
+	}
+	var buff struct{ Error string }
+	if err := json.NewDecoder(w.Body).Decode(&buff); err != nil {
+		t.Fatal(err)
+	} else if err := "invalid_request"; buff.Error != err {
+		t.Error(buff.Error)
+		t.Fatal(err)
+	}
+}
+
+// 仲介データに iss が無かったらエラーを返すことの検査。
+func TestDenyNoIss(t *testing.T) {
+	// ////////////////////////////////
+	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
+	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// ////////////////////////////////
+
+	testSingleDenyNoSomething(t, "iss")
+}
+
+// 仲介データに sub が無かったらエラーを返すことの検査。
+func TestDenyNoSub(t *testing.T) {
+	// ////////////////////////////////
+	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
+	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// ////////////////////////////////
+
+	testSingleDenyNoSomething(t, "sub")
+}
+
+// 仲介データに aud が無かったらエラーを返すことの検査。
+func TestDenyNoAud(t *testing.T) {
+	// ////////////////////////////////
+	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
+	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// ////////////////////////////////
+
+	testSingleDenyNoSomething(t, "aud")
+}
+
+// 仲介コードが 1 つの場合に、仲介データに from_client が無かったらエラーを返すことの検査。
+func TestSingleDenyNoFromClient(t *testing.T) {
+	// ////////////////////////////////
+	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
+	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// ////////////////////////////////
+
+	testSingleDenyNoSomething(t, "from_client")
+}
+
+// 仲介コードが 1 つの場合に、仲介データに user_tag が無かったらエラーを返すことの検査。
+func TestSingleDenyNoUserTag(t *testing.T) {
+	// ////////////////////////////////
+	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
+	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// ////////////////////////////////
+
+	testSingleDenyNoSomething(t, "user_tag")
+}
+
+func testSingleDenyNoSomething(t *testing.T, something string) {
+	idpServ, err := newTestIdProvider([]jwk.Key{test_idpKey})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer idpServ.close()
+	idp := idpServ.info()
+	hndl := newTestHandler([]jwk.Key{test_toTaKey}, []idpdb.Element{idp})
+
+	r, err := newTestSingleRequestWithParams(hndl, idp, map[string]interface{}{something: nil})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s, h, b, err := newTestSingleIdpResponse(hndl, idp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	idpServ.addResponse(s, h, b)
+
+	w := httptest.NewRecorder()
+	hndl.ServeHTTP(w, r)
+
+	if w.Code != http.StatusBadRequest {
+		t.Error(w.Code)
+		t.Fatal(http.StatusBadRequest)
+	}
+	var buff struct{ Error string }
+	if err := json.NewDecoder(w.Body).Decode(&buff); err != nil {
+		t.Fatal(err)
+	} else if err := "invalid_request"; buff.Error != err {
+		t.Error(buff.Error)
+		t.Fatal(err)
+	}
+}
+
+// 仲介コードが 2 つ以上の場合に、仲介データに ref_hash が無かったらエラーを返すことの検査。
+func TestMultiDenyNoRefHash(t *testing.T) {
+	// ////////////////////////////////
+	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
+	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// ////////////////////////////////
+
+	testMultiDenyNoSomething(t, "ref_hash", "")
+	testMultiDenyNoSomething(t, "", "ref_hash")
+}
+
+// 仲介コードが 2 つ以上の場合に、仲介データに user_tags が無かったらエラーを返すことの検査。
+func TestMultiDenyNoUserTags(t *testing.T) {
+	// ////////////////////////////////
+	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
+	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// ////////////////////////////////
+
+	testMultiDenyNoSomething(t, "", "user_tags")
+}
+
+func testMultiDenyNoSomething(t *testing.T, something1, something2 string) {
+	// ////////////////////////////////
+	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
+	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// ////////////////////////////////
+
+	idpServ, err := newTestIdProvider([]jwk.Key{test_idpKey})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer idpServ.close()
+	idp := idpServ.info()
+	subIdpServ, err := newTestIdProvider([]jwk.Key{test_subIdpKey})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer subIdpServ.close()
+	subIdp := subIdpServ.info()
+	hndl := newTestHandler([]jwk.Key{test_toTaKey}, []idpdb.Element{idp, subIdp})
+
+	r, err := newTestRequestWithParams(hndl, idp, subIdp, map[string]interface{}{something1: nil}, map[string]interface{}{something2: nil})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	{
+		s, h, b, err := newTestMainIdpResponse(hndl, idp)
+		if err != nil {
+			t.Fatal(err)
+		}
+		idpServ.addResponse(s, h, b)
+	}
+	{
+		s, h, b, err := newTestSubIdpResponse(hndl, subIdp)
+		if err != nil {
+			t.Fatal(err)
+		}
+		subIdpServ.addResponse(s, h, b)
+	}
+
+	w := httptest.NewRecorder()
+	hndl.ServeHTTP(w, r)
+
+	if w.Code != http.StatusBadRequest {
+		t.Error(w.Code)
+		t.Fatal(http.StatusBadRequest)
+	}
+	var buff struct{ Error string }
+	if err := json.NewDecoder(w.Body).Decode(&buff); err != nil {
+		t.Fatal(err)
+	} else if err := "invalid_request"; buff.Error != err {
+		t.Error(buff.Error)
+		t.Fatal(err)
+	}
+}
+
+// アカウントタグが重複したらエラーを返すことの検査。
+func TestMultiDenyAccountTagOverlap(t *testing.T) {
+	// ////////////////////////////////
+	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
+	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// ////////////////////////////////
+
+	idpServ, err := newTestIdProvider([]jwk.Key{test_idpKey})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer idpServ.close()
+	idp := idpServ.info()
+	subIdpServ, err := newTestIdProvider([]jwk.Key{test_subIdpKey})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer subIdpServ.close()
+	subIdp := subIdpServ.info()
+	hndl := newTestHandler([]jwk.Key{test_toTaKey}, []idpdb.Element{idp, subIdp})
+
+	r, err := newTestRequestWithParams(hndl, idp, subIdp, nil, map[string]interface{}{"user_tags": []string{test_subAcnt1Tag}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	{
+		s, h, b, err := newTestMainIdpResponse(hndl, idp)
+		if err != nil {
+			t.Fatal(err)
+		}
+		idpServ.addResponse(s, h, b)
+	}
+	{
+		s, h, b, err := newTestSubIdpResponse(hndl, subIdp)
+		if err != nil {
+			t.Fatal(err)
+		}
+		subIdpServ.addResponse(s, h, b)
+	}
+
+	w := httptest.NewRecorder()
+	hndl.ServeHTTP(w, r)
+
+	if w.Code != http.StatusBadRequest {
+		t.Error(w.Code)
+		t.Fatal(http.StatusBadRequest)
+	}
+	var buff struct{ Error string }
+	if err := json.NewDecoder(w.Body).Decode(&buff); err != nil {
+		t.Fatal(err)
+	} else if err := "invalid_request"; buff.Error != err {
+		t.Error(buff.Error)
+		t.Fatal(err)
+	}
+}
+
+// セッションを発行できることの検査。
+func TestSession(t *testing.T) {
+	// ////////////////////////////////
+	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
+	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// ////////////////////////////////
+
+	idpServ, err := newTestIdProvider([]jwk.Key{test_idpKey})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer idpServ.close()
+	idp := idpServ.info()
+	subIdpServ, err := newTestIdProvider([]jwk.Key{test_subIdpKey})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer subIdpServ.close()
+	subIdp := subIdpServ.info()
+	hndl := newTestHandler([]jwk.Key{test_toTaKey}, []idpdb.Element{idp, subIdp})
+
+	r, err := newTestRequest(hndl, idp, subIdp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	{
+		s, h, b, err := newTestMainIdpResponseWithParams(hndl, idp, nil, map[string]interface{}{
+			"ids": map[string]map[string]interface{}{
+				test_acntTag: {
+					"sub": test_acntId,
+				},
+				test_subAcnt1Tag: {
+					"sub": test_subAcnt1Id,
+				},
+			}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		idpServ.addResponse(s, h, b)
+	}
+	{
+		s, h, b, err := newTestSubIdpResponseWithParams(hndl, subIdp, nil, map[string]interface{}{
+			"ids": map[string]map[string]interface{}{
+				test_subAcnt2Tag: {
+					"sub": test_subAcnt2Id,
+				},
+			}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		subIdpServ.addResponse(s, h, b)
+	}
+
+	w := httptest.NewRecorder()
+	hndl.ServeHTTP(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Error(w.Code)
+		t.Fatal(http.StatusOK)
+	} else if cook := w.HeaderMap.Get("Set-Cookie"); cook == "" {
+		t.Fatal("no session")
+	}
+}
+
+// ID プロバイダからアクセストークンが帰って来なかったら拒否できること検査。
+func TestDenyNoAccessTokenFromIdProvider(t *testing.T) {
+	// ////////////////////////////////
+	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
+	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// ////////////////////////////////
+
+	testDenyNoSomethingFromIdProvider(t, "access_token", "")
+}
+
+// ID プロバイダから ids_token が帰って来なかったら拒否できること検査。
+func TestDenyNoIdsTokenFromIdProvider(t *testing.T) {
+	// ////////////////////////////////
+	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
+	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// ////////////////////////////////
+
+	testDenyNoSomethingFromIdProvider(t, "ids_token", "")
+}
+
+// ID プロバイダから ids_token の iss が帰って来なかったら拒否できること検査。
+func TestDenyNoIdsTokenIssFromIdProvider(t *testing.T) {
+	// ////////////////////////////////
+	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
+	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// ////////////////////////////////
+
+	testDenyNoSomethingFromIdProvider(t, "", "iss")
+}
+
+// ID プロバイダから ids_token の sub が帰って来なかったら拒否できること検査。
+func TestDenyNoIdsTokenSubFromIdProvider(t *testing.T) {
+	// ////////////////////////////////
+	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
+	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// ////////////////////////////////
+
+	testDenyNoSomethingFromIdProvider(t, "", "sub")
+}
+
+// ID プロバイダから ids_token の aud が帰って来なかったら拒否できること検査。
+func TestDenyNoIdsTokenAudFromIdProvider(t *testing.T) {
+	// ////////////////////////////////
+	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
+	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// ////////////////////////////////
+
+	testDenyNoSomethingFromIdProvider(t, "", "aud")
+}
+
+// ID プロバイダから ids_token の exp が帰って来なかったら拒否できること検査。
+func TestDenyNoIdsTokenExpFromIdProvider(t *testing.T) {
+	// ////////////////////////////////
+	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
+	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// ////////////////////////////////
+
+	testDenyNoSomethingFromIdProvider(t, "", "exp")
+}
+
+// ID プロバイダから ids_token の iat が帰って来なかったら拒否できること検査。
+func TestDenyNoIdsTokenIatFromIdProvider(t *testing.T) {
+	// ////////////////////////////////
+	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
+	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// ////////////////////////////////
+
+	testDenyNoSomethingFromIdProvider(t, "", "iat")
+}
+
+// ID プロバイダから ids_token の ids が帰って来なかったら拒否できること検査。
+func TestDenyNoIdsTokenIdsFromIdProvider(t *testing.T) {
+	// ////////////////////////////////
+	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
+	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// ////////////////////////////////
+
+	testDenyNoSomethingFromIdProvider(t, "", "ids")
+}
+
+func testDenyNoSomethingFromIdProvider(t *testing.T, something1, something2 string) {
+	idpServ, err := newTestIdProvider([]jwk.Key{test_idpKey})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer idpServ.close()
+	idp := idpServ.info()
+	hndl := newTestHandler([]jwk.Key{test_toTaKey}, []idpdb.Element{idp})
+
+	r, err := newTestSingleRequest(hndl, idp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s, h, b, err := newTestSingleIdpResponseWithParams(hndl, idp, map[string]interface{}{something1: nil}, map[string]interface{}{something2: nil})
+	if err != nil {
+		t.Fatal(err)
+	}
+	idpServ.addResponse(s, h, b)
+
+	w := httptest.NewRecorder()
+	hndl.ServeHTTP(w, r)
+
+	if w.Code != http.StatusForbidden {
+		t.Error(w.Code)
+		t.Fatal(http.StatusForbidden)
+	}
+	var buff struct{ Error string }
+	if err := json.NewDecoder(w.Body).Decode(&buff); err != nil {
+		t.Fatal(err)
+	} else if err := "access_denied"; buff.Error != err {
+		t.Error(buff.Error)
+		t.Fatal(err)
+	}
+}
+
+// ID プロバイダから要求した主体の情報が帰って来なかったら拒否できること検査。
+func TestDenyNoMainAccountFromIdProvider(t *testing.T) {
+	idpServ, err := newTestIdProvider([]jwk.Key{test_idpKey})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer idpServ.close()
+	idp := idpServ.info()
+	hndl := newTestHandler([]jwk.Key{test_toTaKey}, []idpdb.Element{idp})
+
+	r, err := newTestSingleRequest(hndl, idp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s, h, b, err := newTestSingleIdpResponseWithParams(hndl, idp, nil, map[string]interface{}{
+		"ids": map[string]map[string]interface{}{
+			test_subAcnt1Tag: {
+				"sub":   test_subAcnt1Id,
+				"email": test_subAcnt1Email,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	idpServ.addResponse(s, h, b)
+
+	w := httptest.NewRecorder()
+	hndl.ServeHTTP(w, r)
+
+	if w.Code != http.StatusForbidden {
+		t.Error(w.Code)
+		t.Fatal(http.StatusForbidden)
+	}
+	var buff struct{ Error string }
+	if err := json.NewDecoder(w.Body).Decode(&buff); err != nil {
+		t.Fatal(err)
+	} else if err := "access_denied"; buff.Error != err {
+		t.Error(buff.Error)
+		t.Fatal(err)
+	}
+}
+
+// ID プロバイダから要求した主体でないアカウント情報が帰って来なかったら拒否できること検査。
+func TestDenyNoSubAccountFromIdProvider(t *testing.T) {
+	idpServ, err := newTestIdProvider([]jwk.Key{test_idpKey})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer idpServ.close()
+	idp := idpServ.info()
+	hndl := newTestHandler([]jwk.Key{test_toTaKey}, []idpdb.Element{idp})
+
+	r, err := newTestSingleRequest(hndl, idp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s, h, b, err := newTestSingleIdpResponseWithParams(hndl, idp, nil, map[string]interface{}{
+		"ids": map[string]map[string]interface{}{
+			test_acntTag: {
+				"sub":   test_acntId,
+				"email": test_acntEmail,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	idpServ.addResponse(s, h, b)
+
+	w := httptest.NewRecorder()
+	hndl.ServeHTTP(w, r)
+
+	if w.Code != http.StatusForbidden {
+		t.Error(w.Code)
+		t.Fatal(http.StatusForbidden)
+	}
+	var buff struct{ Error string }
+	if err := json.NewDecoder(w.Body).Decode(&buff); err != nil {
+		t.Fatal(err)
+	} else if err := "access_denied"; buff.Error != err {
+		t.Error(buff.Error)
+		t.Fatal(err)
 	}
 }

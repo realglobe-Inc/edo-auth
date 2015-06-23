@@ -78,6 +78,10 @@ var (
 
 // コードトークン 1 つのリクエスト。
 func newTestSingleRequest(hndl *handler, idp idpdb.Element) (*http.Request, error) {
+	return newTestSingleRequestWithParams(hndl, idp, nil)
+}
+
+func newTestSingleRequestWithParams(hndl *handler, idp idpdb.Element, params map[string]interface{}) (*http.Request, error) {
 	r, err := http.NewRequest("GET", "http://localhost/coop", nil)
 	if err != nil {
 		return nil, erro.Wrap(err)
@@ -91,6 +95,9 @@ func newTestSingleRequest(hndl *handler, idp idpdb.Element) (*http.Request, erro
 	codTok.SetClaim("from_client", test_frTa.Id())
 	codTok.SetClaim("user_tag", test_acntTag)
 	codTok.SetClaim("user_tags", []string{test_subAcnt1Tag})
+	for k, v := range params {
+		codTok.SetClaim(k, v)
+	}
 	if err := codTok.Sign(idp.Keys()); err != nil {
 		return nil, erro.Wrap(err)
 	}
@@ -108,8 +115,16 @@ func newTestSingleIdpResponse(hndl *handler, idp idpdb.Element) (status int, hea
 	return newTestMainIdpResponse(hndl, idp)
 }
 
+func newTestSingleIdpResponseWithParams(hndl *handler, idp idpdb.Element, params, idsTokParams map[string]interface{}) (status int, header http.Header, body []byte, err error) {
+	return newTestMainIdpResponseWithParams(hndl, idp, params, idsTokParams)
+}
+
 // コードトークン 2 つ以上のリクエスト。
 func newTestRequest(hndl *handler, idp, subIdp idpdb.Element) (*http.Request, error) {
+	return newTestRequestWithParams(hndl, idp, subIdp, nil, nil)
+}
+
+func newTestRequestWithParams(hndl *handler, idp, subIdp idpdb.Element, params, subParams map[string]interface{}) (*http.Request, error) {
 	r, err := http.NewRequest("GET", "http://localhost/coop", nil)
 	if err != nil {
 		return nil, erro.Wrap(err)
@@ -124,6 +139,9 @@ func newTestRequest(hndl *handler, idp, subIdp idpdb.Element) (*http.Request, er
 	codTok.SetClaim("user_tag", test_acntTag)
 	codTok.SetClaim("user_tags", []string{test_subAcnt1Tag})
 	codTok.SetClaim("ref_hash", test_refHash)
+	for k, v := range params {
+		codTok.SetClaim(k, v)
+	}
 	if err := codTok.Sign(idp.Keys()); err != nil {
 		return nil, erro.Wrap(err)
 	}
@@ -140,6 +158,9 @@ func newTestRequest(hndl *handler, idp, subIdp idpdb.Element) (*http.Request, er
 	subCodTok.SetClaim("aud", audience.New(hndl.selfId))
 	subCodTok.SetClaim("user_tags", []string{test_subAcnt2Tag})
 	subCodTok.SetClaim("ref_hash", test_refHash)
+	for k, v := range subParams {
+		subCodTok.SetClaim(k, v)
+	}
 	if err := subCodTok.Sign(subIdp.Keys()); err != nil {
 		return nil, erro.Wrap(err)
 	}
@@ -153,6 +174,10 @@ func newTestRequest(hndl *handler, idp, subIdp idpdb.Element) (*http.Request, er
 }
 
 func newTestMainIdpResponse(hndl *handler, idp idpdb.Element) (status int, header http.Header, body []byte, err error) {
+	return newTestMainIdpResponseWithParams(hndl, idp, nil, nil)
+}
+
+func newTestMainIdpResponseWithParams(hndl *handler, idp idpdb.Element, params, idsTokParams map[string]interface{}) (status int, header http.Header, body []byte, err error) {
 	now := time.Now()
 
 	idsTok := jwt.New()
@@ -172,6 +197,9 @@ func newTestMainIdpResponse(hndl *handler, idp idpdb.Element) (status int, heade
 			"email": test_subAcnt1Email,
 		},
 	})
+	for k, v := range idsTokParams {
+		idsTok.SetClaim(k, v)
+	}
 	if err := idsTok.Sign(idp.Keys()); err != nil {
 		return 0, nil, nil, erro.Wrap(err)
 	}
@@ -187,6 +215,13 @@ func newTestMainIdpResponse(hndl *handler, idp idpdb.Element) (status int, heade
 		"scope":        "openid email",
 		"ids_token":    string(data),
 	}
+	for k, v := range params {
+		if v == nil {
+			delete(m, k)
+		} else {
+			m[k] = v
+		}
+	}
 	body, err = json.Marshal(m)
 	if err != nil {
 		return 0, nil, nil, erro.Wrap(err)
@@ -196,6 +231,10 @@ func newTestMainIdpResponse(hndl *handler, idp idpdb.Element) (status int, heade
 }
 
 func newTestSubIdpResponse(hndl *handler, idp idpdb.Element) (status int, header http.Header, body []byte, err error) {
+	return newTestSubIdpResponseWithParams(hndl, idp, nil, nil)
+}
+
+func newTestSubIdpResponseWithParams(hndl *handler, idp idpdb.Element, params, idsTokParams map[string]interface{}) (status int, header http.Header, body []byte, err error) {
 	now := time.Now()
 
 	idsTok := jwt.New()
@@ -211,6 +250,9 @@ func newTestSubIdpResponse(hndl *handler, idp idpdb.Element) (status int, header
 			"email": test_subAcnt2Email,
 		},
 	})
+	for k, v := range idsTokParams {
+		idsTok.SetClaim(k, v)
+	}
 	if err := idsTok.Sign(idp.Keys()); err != nil {
 		return 0, nil, nil, erro.Wrap(err)
 	}
@@ -221,6 +263,13 @@ func newTestSubIdpResponse(hndl *handler, idp idpdb.Element) (status int, header
 
 	m := map[string]interface{}{
 		"ids_token": string(data),
+	}
+	for k, v := range params {
+		if v == nil {
+			delete(m, k)
+		} else {
+			m[k] = v
+		}
 	}
 	body, err = json.Marshal(m)
 	if err != nil {

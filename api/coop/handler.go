@@ -178,10 +178,16 @@ func (this *environment) serve(w http.ResponseWriter, r *http.Request) error {
 			return erro.Wrap(idperr.New(idperr.Invalid_request, "no referral hash", http.StatusBadRequest, nil))
 		} else if codTok.accountTag() != "" {
 			if acntTag != "" {
-				return erro.Wrap(idperr.New(idperr.Invalid_request, "two main account tags", http.StatusBadRequest, nil))
+				return erro.Wrap(idperr.New(idperr.Invalid_request, "two main token", http.StatusBadRequest, nil))
 			}
 			acntTag = codTok.accountTag()
 			log.Debug(this.sender, ": Main account tag is "+acntTag)
+			if codTok.fromTa() == "" {
+				return erro.Wrap(idperr.New(idperr.Invalid_request, "no from-TA in main token", http.StatusBadRequest, nil))
+			}
+			log.Debug(this.sender, ": From-TA is "+codTok.fromTa())
+		} else if len(codTok.accountTags()) == 0 {
+			return erro.Wrap(idperr.New(idperr.Invalid_request, "no account tags in sub token", http.StatusBadRequest, nil))
 		}
 
 		for tag := range codTok.accountTags() {
@@ -387,7 +393,22 @@ func (this *environment) getInfo(isMain bool, idp idpdb.Element, codTok *codeTok
 		return "", nil, nil, erro.Wrap(idperr.New(idperr.Access_denied, erro.Unwrap(err).Error(), http.StatusForbidden, err))
 	}
 
+	tagToAttrs = map[string]map[string]interface{}{}
+	for acntTag := range codTok.accountTags() {
+		attrs := idsTok.attributes()[acntTag]
+		if attrs == nil {
+			return "", nil, nil, erro.Wrap(idperr.New(idperr.Access_denied, "cannot get sub account tagged by "+acntTag, http.StatusForbidden, nil))
+		}
+		tagToAttrs[acntTag] = attrs
+	}
+
 	if isMain {
+		attrs := idsTok.attributes()[codTok.accountTag()]
+		if attrs == nil {
+			return "", nil, nil, erro.Wrap(idperr.New(idperr.Access_denied, "cannot get main account tagged by "+codTok.accountTag(), http.StatusForbidden, nil))
+		}
+		tagToAttrs[codTok.accountTag()] = attrs
+
 		if coopResp.token() == "" {
 			return "", nil, nil, erro.Wrap(idperr.New(idperr.Access_denied, "cannot get token", http.StatusForbidden, nil))
 		}
@@ -401,7 +422,7 @@ func (this *environment) getInfo(isMain bool, idp idpdb.Element, codTok *codeTok
 		log.Info(this.sender, ": Saved access token "+logutil.Mosaic(tok.Id()))
 	}
 
-	return idsTok.fromTa(), tok, idsTok.attributes(), nil
+	return idsTok.fromTa(), tok, tagToAttrs, nil
 }
 
 // TA 認証用署名をつくる。
