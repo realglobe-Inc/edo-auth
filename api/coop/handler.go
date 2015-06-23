@@ -178,7 +178,7 @@ func (this *environment) serve(w http.ResponseWriter, r *http.Request) error {
 			return erro.Wrap(idperr.New(idperr.Invalid_request, "no referral hash", http.StatusBadRequest, nil))
 		} else if codTok.accountTag() != "" {
 			if acntTag != "" {
-				return erro.Wrap(idperr.New(idperr.Invalid_request, "two main account tags", http.StatusBadRequest, nil))
+				return erro.Wrap(idperr.New(idperr.Invalid_request, "two main token", http.StatusBadRequest, nil))
 			}
 			acntTag = codTok.accountTag()
 			log.Debug(this.sender, ": Main account tag is "+acntTag)
