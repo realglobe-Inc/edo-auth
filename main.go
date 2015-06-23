@@ -225,6 +225,7 @@ func serve(param *parameters) (err error) {
 		param.sigAlg,
 		param.sigKid,
 		param.csessLabel,
+		param.csessLen,
 		param.tokTagLen,
 		param.tokDbExpIn,
 		param.jtiLen,
@@ -234,6 +235,8 @@ func serve(param *parameters) (err error) {
 		tokDb,
 		idGen,
 		tr,
+		param.cookPath,
+		param.cookSec,
 		param.debug,
 	))
 	routes[param.pathCoop] = true

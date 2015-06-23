@@ -77,6 +77,7 @@ type parameters struct {
 	fsessExpIn time.Duration
 	// TA 間連携セッション。
 	csessLabel string
+	csessLen   int
 	// 認証パラメータ。
 	statLen int
 	noncLen int
@@ -177,14 +178,15 @@ func parseParameters(args ...string) (param *parameters, err error) {
 
 	flags.StringVar(&param.tmplErr, "tmplErr", "", "Error UI template")
 
-	flags.StringVar(&param.asessLabel, "asessLabel", "Auth-User-Backend", "User session ID label")
-	flags.IntVar(&param.asessLen, "asessLen", 30, "User session ID length")
-	flags.DurationVar(&param.asessExpIn, "asessExpIn", time.Hour, "User session expiration duration")
-	flags.DurationVar(&param.asessDbExpIn, "asessDbExpIn", 24*time.Hour, "User session keep duration")
+	flags.StringVar(&param.asessLabel, "asessLabel", "Auth-User-Backend", "Authentication session ID label")
+	flags.IntVar(&param.asessLen, "asessLen", 30, "Authentication session ID length")
+	flags.DurationVar(&param.asessExpIn, "asessExpIn", time.Hour, "Authentication session expiration duration")
+	flags.DurationVar(&param.asessDbExpIn, "asessDbExpIn", 24*time.Hour, "Authentication session keep duration")
 	flags.StringVar(&param.fsessLabel, "fsessLabel", "Auth-User", "Frontend session ID label")
 	flags.IntVar(&param.fsessLen, "fsessLen", 30, "Frontend session ID length")
 	flags.DurationVar(&param.fsessExpIn, "fsessExpIn", 7*24*time.Hour, "Frontend session expiration duration")
-	flags.StringVar(&param.csessLabel, "csessLabel", "Edo-Coop", "Cooperation session ID label")
+	flags.StringVar(&param.csessLabel, "csessLabel", "Edo-Cooperation", "Cooperation session ID label")
+	flags.IntVar(&param.csessLen, "csessLen", 30, "Cooperation session ID length")
 	flags.IntVar(&param.statLen, "statLen", 10, "state parameter length")
 	flags.IntVar(&param.noncLen, "noncLen", 10, "nonce parameter length")
 	flags.IntVar(&param.tokTagLen, "tokTagLen", 10, "Token tag length")

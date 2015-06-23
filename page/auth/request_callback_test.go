@@ -34,7 +34,7 @@ func TestCallbackRequest(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	req, err := parseCallbackRequest(r, nil)
+	req, err := parseCallbackRequest(r)
 	if err != nil {
 		t.Fatal(err)
 	}

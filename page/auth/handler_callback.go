@@ -49,25 +49,26 @@ func (this *Page) HandleCallback(w http.ResponseWriter, r *http.Request) {
 	log.Info(sender, ": Received callback request")
 	defer log.Info(sender, ": Handled callback request")
 
-	if err := this.callbackServe(w, r, sender); err != nil {
+	if err := (&environment{this, sender, nil}).callbackServe(w, r); err != nil {
 		server.RespondErrorHtml(w, r, erro.Wrap(err), this.errTmpl, sender.String()+": ")
 		return
 	}
 	return
 }
 
-func (this *Page) callbackServe(w http.ResponseWriter, r *http.Request, sender *request.Request) error {
-	if sender.Session() == "" {
+func (this *environment) callbackServe(w http.ResponseWriter, r *http.Request) error {
+	if this.sender.Session() == "" {
 		return erro.Wrap(server.NewError(http.StatusBadRequest, "no session ", nil))
 	}
 
-	sess, err := this.sessDb.Get(sender.Session())
+	sess, err := this.sessDb.Get(this.sender.Session())
 	if err != nil {
 		return erro.Wrap(err)
 	} else if sess == nil {
 		return erro.Wrap(server.NewError(http.StatusBadRequest, "declared user session is not exist", nil))
 	}
-	log.Debug(sender, ": Declared user session is exist")
+	this.sess = sess
+	log.Debug(this.sender, ": Declared user session is exist")
 
 	savedDate := sess.Date()
 	sess.Invalidate()
@@ -77,12 +78,12 @@ func (this *Page) callbackServe(w http.ResponseWriter, r *http.Request, sender *
 		return erro.Wrap(server.NewError(http.StatusBadRequest, "reused user session", nil))
 	}
 
-	req, err := parseCallbackRequest(r, sender)
+	req, err := parseCallbackRequest(r)
 	if err != nil {
 		return erro.Wrap(server.NewError(http.StatusBadRequest, erro.Unwrap(err).Error(), err))
 	}
 
-	log.Debug(req, ": Parsed callback request")
+	log.Debug(this.sender, ": Parsed callback request")
 
 	if req.state() != sess.State() {
 		return erro.Wrap(server.NewError(http.StatusForbidden, "invalid state", nil))
@@ -98,7 +99,7 @@ func (this *Page) callbackServe(w http.ResponseWriter, r *http.Request, sender *
 		} else if idp == nil {
 			return erro.Wrap(server.NewError(http.StatusBadRequest, "ID provider "+sess.IdProvider()+" is not exist", nil))
 		}
-		log.Debug(req, ": ID provider "+idp.Id()+" is exist")
+		log.Debug(this.sender, ": ID provider "+idp.Id()+" is exist")
 	} else {
 		idTok, err := parseIdToken(req.idToken())
 		if err != nil {
@@ -111,7 +112,7 @@ func (this *Page) callbackServe(w http.ResponseWriter, r *http.Request, sender *
 		} else if idp == nil {
 			return erro.Wrap(server.NewError(http.StatusBadRequest, "ID provider "+idTok.idProvider()+" is not exist", nil))
 		}
-		log.Debug(req, ": ID provider "+idp.Id()+" is exist")
+		log.Debug(this.sender, ": ID provider "+idp.Id()+" is exist")
 
 		if idTok.nonce() != sess.Nonce() {
 			return erro.Wrap(server.NewError(http.StatusForbidden, "invalid nonce", nil))
@@ -121,17 +122,17 @@ func (this *Page) callbackServe(w http.ResponseWriter, r *http.Request, sender *
 			return erro.Wrap(server.NewError(http.StatusForbidden, erro.Unwrap(err).Error(), err))
 		}
 		attrs1 = idTok.attributes()
-		log.Debug(req, ": ID token is OK")
+		log.Debug(this.sender, ": ID token is OK")
 	}
 
 	// アクセストークンを取得する。
-	tok, idTok, err := this.getAccessToken(req, idp, sess)
+	tok, idTok, err := this.getAccessToken(req, idp)
 	if err != nil {
 		return erro.Wrap(err)
 	}
 
 	// アカウント情報を取得する。
-	attrs2, err := this.getAccountInfo(req, tok, idp, sess)
+	attrs2, err := this.getAccountInfo(req, tok, idp)
 	if err != nil {
 		return erro.Wrap(err)
 	}
@@ -155,7 +156,7 @@ func (this *Page) callbackServe(w http.ResponseWriter, r *http.Request, sender *
 	now := time.Now()
 	http.SetCookie(w, this.newCookie(sess.Id(), now.Add(-time.Second)))
 	http.SetCookie(w, this.newFrontCookie(this.idGen.String(this.fsessLen), now.Add(this.fsessExpIn)))
-	log.Info(req, ": Upgrade user session to frontend session")
+	log.Info(this.sender, ": Upgrade user session to frontend session")
 
 	// フロントエンドが使うので保存しなくて良い。
 
@@ -164,6 +165,6 @@ func (this *Page) callbackServe(w http.ResponseWriter, r *http.Request, sender *
 	w.Header().Add(tagPragma, tagNo_cache)
 
 	http.Redirect(w, r, sess.Path(), http.StatusFound)
-	log.Info(req, ": Redirect to "+sess.Path())
+	log.Info(this.sender, ": Redirect to "+sess.Path())
 	return nil
 }

@@ -15,20 +15,17 @@
 package auth
 
 import (
-	"github.com/realglobe-Inc/edo-idp-selector/request"
 	"github.com/realglobe-Inc/go-lib/erro"
 	"net/http"
 )
 
 type callbackRequest struct {
-	*request.Request
-
 	cod   string
 	stat  string
 	idTok []byte
 }
 
-func parseCallbackRequest(r *http.Request, base *request.Request) (*callbackRequest, error) {
+func parseCallbackRequest(r *http.Request) (*callbackRequest, error) {
 	cod := r.FormValue(tagCode)
 	if cod == "" {
 		return nil, erro.New("no code")
@@ -37,7 +34,11 @@ func parseCallbackRequest(r *http.Request, base *request.Request) (*callbackRequ
 	if rawIdTok := r.FormValue(tagId_token); rawIdTok != "" {
 		idTok = []byte(rawIdTok)
 	}
-	return &callbackRequest{base, cod, r.FormValue(tagState), idTok}, nil
+	return &callbackRequest{
+		cod,
+		r.FormValue(tagState),
+		idTok,
+	}, nil
 }
 
 // 認可コードを返す。

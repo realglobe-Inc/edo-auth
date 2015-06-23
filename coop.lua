@@ -88,6 +88,10 @@ if session_id then
    ngx.req.set_header("X-Auth-User", session:get_account())
    ngx.req.set_header("X-Auth-User-Tag", session:get_account_tag())
    ngx.req.set_header("X-Auth-From-Id", session:get_from_ta())
+   local accounts = session:get_accounts()
+   if accounts then
+      ngx.req.set_header("X-Auth-Users", accounts)
+   end
    return;
 end
 
@@ -160,7 +164,8 @@ if accounts_info then
    ngx.req.set_header("X-Auth-Users", accounts_info)
 end
 
-local session_id, session_exp_in = get_session(resp.header["Set-Cookie"])
+local session_cookie = resp.header["Set-Cookie"]
+local session_id, session_exp_in = get_session(session_cookie)
 if session_id and session_exp_in and session_exp_in > 0 then
    -- セッションが宣言された。
    ngx.log(log_level, "TA session is declared")
@@ -171,9 +176,12 @@ if session_id and session_exp_in and session_exp_in > 0 then
    end
    local database = session_db.new_redis(redis, redis_session_tag)
 
-   local err = database:save(session.new(session_id, account_info, account_tag, from_ta), session_exp_in)
+   local err = database:save(session.new(session_id, account_info, account_tag, from_ta, accounts_info), session_exp_in)
    if err then
       return erro.respond_json({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "database error: " .. err})
    end
+
    ngx.log(log_level, "saved account info")
+
+   ngx.header["Set-Cookie"] = session_cookie
 end

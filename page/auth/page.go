@@ -17,10 +17,11 @@ package auth
 
 import (
 	"encoding/json"
-	"github.com/realglobe-Inc/edo-auth/database/token"
 	"github.com/realglobe-Inc/edo-auth/database/asession"
+	"github.com/realglobe-Inc/edo-auth/database/token"
 	keydb "github.com/realglobe-Inc/edo-id-provider/database/key"
 	idpdb "github.com/realglobe-Inc/edo-idp-selector/database/idp"
+	"github.com/realglobe-Inc/edo-idp-selector/request"
 	"github.com/realglobe-Inc/edo-lib/jwt"
 	logutil "github.com/realglobe-Inc/edo-lib/log"
 	"github.com/realglobe-Inc/edo-lib/rand"
@@ -97,32 +98,32 @@ func New(
 	debug bool,
 ) *Page {
 	return &Page{
-		stopper:     stopper,
-		selfId:      selfId,
-		rediUri:     rediUri,
-		sigAlg:      sigAlg,
-		errTmpl:     errTmpl,
-		sessLabel:   sessLabel,
-		sessLen:     sessLen,
-		sessExpIn:   sessExpIn,
-		sessDbExpIn: sessDbExpIn,
-		fsessLabel:  fsessLabel,
-		fsessLen:    fsessLen,
-		fsessExpIn:  fsessExpIn,
-		statLen:     statLen,
-		noncLen:     noncLen,
-		tokTagLen:   tokTagLen,
-		tokDbExpIn:  tokDbExpIn,
-		jtiLen:      jtiLen,
-		jtiExpIn:    jtiExpIn,
-		keyDb:       keyDb,
-		idpDb:       idpDb,
-		sessDb:      sessDb,
-		tokDb:       tokDb,
-		idGen:       idGen,
-		cookPath:    cookPath,
-		cookSec:     cookSec,
-		debug:       debug,
+		stopper,
+		selfId,
+		rediUri,
+		sigAlg,
+		errTmpl,
+		sessLabel,
+		sessLen,
+		sessExpIn,
+		sessDbExpIn,
+		fsessLabel,
+		fsessLen,
+		fsessExpIn,
+		statLen,
+		noncLen,
+		tokTagLen,
+		tokDbExpIn,
+		jtiLen,
+		jtiExpIn,
+		keyDb,
+		idpDb,
+		sessDb,
+		tokDb,
+		idGen,
+		cookPath,
+		cookSec,
+		debug,
 	}
 }
 
@@ -145,8 +146,16 @@ func (this *Page) _newCookie(label, id string, exp time.Time) *http.Cookie {
 	}
 }
 
+// environment のメソッドは server.Error を返す。
+type environment struct {
+	*Page
+
+	sender *request.Request
+	sess   *asession.Element
+}
+
 // 認可コードを使って、ID プロバイダからアクセストークンを取得する。
-func (this *Page) getAccessToken(req *callbackRequest, idp idpdb.Element, sess *asession.Element) (*token.Element, *idToken, error) {
+func (this *environment) getAccessToken(req *callbackRequest, idp idpdb.Element) (*token.Element, *idToken, error) {
 	keys, err := this.keyDb.Get()
 	if err != nil {
 		return nil, nil, erro.Wrap(err)
@@ -158,17 +167,17 @@ func (this *Page) getAccessToken(req *callbackRequest, idp idpdb.Element, sess *
 	// code
 	queries.Set(tagCode, req.code())
 	// redirect_uri
-	queries.Set(tagRedirect_uri, sess.RedirectUri())
+	queries.Set(tagRedirect_uri, this.sess.RedirectUri())
 	// client_id
-	queries.Set(tagClient_id, sess.Ta())
+	queries.Set(tagClient_id, this.sess.Ta())
 	// client_assertion_type
 	queries.Set(tagClient_assertion_type, cliAssTypeJwt_bearer)
 	// client_assertion
 	ass := jwt.New()
 	now := time.Now()
 	ass.SetHeader(tagAlg, this.sigAlg)
-	ass.SetClaim(tagIss, sess.Ta())
-	ass.SetClaim(tagSub, sess.Ta())
+	ass.SetClaim(tagIss, this.sess.Ta())
+	ass.SetClaim(tagSub, this.sess.Ta())
 	ass.SetClaim(tagAud, idp.TokenUri())
 	ass.SetClaim(tagJti, this.idGen.String(this.jtiLen))
 	ass.SetClaim(tagExp, now.Add(this.jtiExpIn).Unix())
@@ -195,24 +204,24 @@ func (this *Page) getAccessToken(req *callbackRequest, idp idpdb.Element, sess *
 	}
 	defer resp.Body.Close()
 	server.LogResponse(level.DEBUG, resp, this.debug)
-	log.Info(req, ": Got token response from "+idp.Id())
+	log.Info(this.sender, ": Got token response from "+idp.Id())
 
 	tokResp, err := parseTokenResponse(resp)
 	if err != nil {
 		return nil, nil, erro.Wrap(server.NewError(http.StatusForbidden, "cannot get access token", nil))
 	}
 	tok := token.New(tokResp.token(), this.idGen.String(this.tokTagLen), tokResp.expires(), idp.Id(), tokResp.scope())
-	log.Info(req, ": Got access token "+logutil.Mosaic(tok.Id()))
+	log.Info(this.sender, ": Got access token "+logutil.Mosaic(tok.Id()))
 
 	if err := this.tokDb.Save(tok, time.Now().Add(this.tokDbExpIn)); err != nil {
 		return nil, nil, erro.Wrap(err)
 	}
-	log.Info(req, ": Saved access token "+logutil.Mosaic(tok.Id()))
+	log.Info(this.sender, ": Saved access token "+logutil.Mosaic(tok.Id()))
 
 	idTok, err := parseIdToken(tokResp.idToken())
 	if err != nil {
 		return nil, nil, erro.Wrap(server.NewError(http.StatusForbidden, erro.Unwrap(err).Error(), err))
-	} else if idTok.nonce() != sess.Nonce() {
+	} else if idTok.nonce() != this.sess.Nonce() {
 		return nil, nil, erro.Wrap(server.NewError(http.StatusForbidden, "invalid nonce", nil))
 	} else if err := idTok.verify(idp.Keys()); err != nil {
 		return nil, nil, erro.Wrap(server.NewError(http.StatusForbidden, erro.Unwrap(err).Error(), err))
@@ -221,13 +230,13 @@ func (this *Page) getAccessToken(req *callbackRequest, idp idpdb.Element, sess *
 			return nil, nil, erro.Wrap(server.NewError(http.StatusForbidden, erro.Unwrap(err).Error(), err))
 		}
 	}
-	log.Info(req, ": ID token is OK")
+	log.Info(this.sender, ": ID token is OK")
 
 	return tok, idTok, nil
 }
 
 // アクセストークンを使って、ID プロバイダからアカウント情報を取得する。
-func (this *Page) getAccountInfo(req *callbackRequest, tok *token.Element, idp idpdb.Element, sess *asession.Element) (attrs map[string]interface{}, err error) {
+func (this *environment) getAccountInfo(req *callbackRequest, tok *token.Element, idp idpdb.Element) (attrs map[string]interface{}, err error) {
 	acntReq, err := http.NewRequest("GET", idp.AccountUri(), nil)
 	if err != nil {
 		return nil, erro.Wrap(err)
@@ -241,12 +250,12 @@ func (this *Page) getAccountInfo(req *callbackRequest, tok *token.Element, idp i
 	}
 	defer resp.Body.Close()
 	server.LogResponse(level.DEBUG, resp, this.debug)
-	log.Info(req, ": Got account info response from "+idp.Id())
+	log.Info(this.sender, ": Got account info response from "+idp.Id())
 
 	if err := json.NewDecoder(resp.Body).Decode(&attrs); err != nil {
 		return nil, erro.Wrap(err)
 	}
-	log.Info(req, ": Got account info")
+	log.Info(this.sender, ": Got account info")
 
 	return attrs, nil
 }

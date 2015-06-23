@@ -33,7 +33,7 @@ func TestAuthRequest(t *testing.T) {
 	}
 	r.Header.Set("X-Auth-Uri", authUri.String())
 
-	req, err := parseAuthRequest(r, nil)
+	req, err := parseAuthRequest(r)
 	if err != nil {
 		t.Fatal(err)
 	}
