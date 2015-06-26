@@ -66,7 +66,8 @@ port $REDIS_PORT
 EOF
 
  ${REDIS_SERVER} redis.conf
- trap "${REDIS_CLIENT} -p ${REDIS_PORT} shutdown" EXIT
+ close_script="${REDIS_CLIENT} -p ${REDIS_PORT} shutdown"
+ trap "${close_script}" EXIT
 
  while ! nc -z localhost ${REDIS_PORT}; do
      sleep ${INTERVAL}
@@ -89,7 +90,8 @@ http {
 }
 EOF
  ${NGINX_DIR}/sbin/nginx -p ${nginx_prefix}
- trap "${REDIS_CLIENT} -p ${REDIS_PORT} shutdown; ${NGINX_DIR}/sbin/nginx -p ${nginx_prefix} -s stop" EXIT
+ close_script="${close_script}; ${NGINX_DIR}/sbin/nginx -p ${nginx_prefix} -s stop"
+ trap "${close_script}" EXIT
 
  while ! nc -z localhost ${NGINX_PORT}; do
      sleep ${INTERVAL}
