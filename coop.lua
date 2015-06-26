@@ -58,6 +58,17 @@ local function get_session(cookie)
 end
 
 
+-- X-Edo-Cooperation-Error ヘッダを付けて返信する。
+local function respond_json(params)
+   if params.message then
+      ngx.header["X-Edo-Cooperation-Error"] = params.message
+   else
+      ngx.header["X-Edo-Cooperation-Error"] = "error occurred"
+   end
+   return erro.respond_json(params)
+end
+
+
 -- ここから本編。
 
 
@@ -68,16 +79,16 @@ if session_id then
 
    local redis, err = redis_wrapper.new(redis_address, redis_timeout, redis_keepalive, redis_pool_size)
    if err then
-      return erro.respond_json({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "database error: " .. err})
+      return respond_json({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "database error: " .. err})
    end
    local database = session_db.new_redis(redis, redis_session_tag)
 
    local session, err = database:get(session_id)
    if err then
-      return erro.respond_json({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "database error: " .. err})
+      return respond_json({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "database error: " .. err})
    elseif not session then
       -- セッションが無かった。
-      return erro.respond_json({status = ngx.HTTP_FORBIDDEN, message = "invalid session"})
+      return respond_json({status = ngx.HTTP_FORBIDDEN, message = "invalid session"})
    end
 
    -- セッションがあった。
@@ -109,7 +120,7 @@ if not ngx.var.http_x_edo_code_tokens then
 
    if not params then
       -- 仲介コードが無かった。
-      return erro.respond_json({status = ngx.HTTP_FORBIDDEN, message = "no code tokens"})
+      return respond_json({status = ngx.HTTP_FORBIDDEN, message = "no code tokens"})
    end
 end
 
@@ -149,12 +160,12 @@ end
 ngx.req.set_header("X-Auth-User", account_info)
 local account_tag = resp.header["X-Auth-User-Tag"]
 if not account_tag then
-   return erro.respond_json({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "no account tag"})
+   return respond_json({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "no account tag"})
 end
 ngx.req.set_header("X-Auth-User-Tag", account_tag)
 local from_ta = resp.header["X-Auth-From-Id"]
 if not from_ta then
-   return erro.respond_json({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "no from-TA"})
+   return respond_json({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "no from-TA"})
 end
 ngx.req.set_header("X-Auth-From-Id", from_ta)
 local accounts_info = resp.header["X-Auth-Users"]
@@ -170,13 +181,13 @@ if session_id and session_exp_in and session_exp_in > 0 then
 
    local redis, err = redis_wrapper.new(redis_address, redis_timeout, redis_keepalive, redis_pool_size)
    if err then
-      return erro.respond_json({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "database error: " .. err})
+      return respond_json({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "database error: " .. err})
    end
    local database = session_db.new_redis(redis, redis_session_tag)
 
    local err = database:save(session.new(session_id, account_info, account_tag, from_ta, accounts_info), session_exp_in)
    if err then
-      return erro.respond_json({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "database error: " .. err})
+      return respond_json({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "database error: " .. err})
    end
 
    ngx.log(log_level, "saved account info")
