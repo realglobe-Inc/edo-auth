@@ -37,12 +37,13 @@ const (
 	tagSub                   = "sub"
 
 	// 頭大文字、ハイフン。
-	tagContent_type      = "Content-Type"
-	tagX_auth_from_id    = "X-Auth-From-Id"
-	tagX_auth_user       = "X-Auth-User"
-	tagX_auth_user_tag   = "X-Auth-User-Tag"
-	tagX_auth_users      = "X-Auth-Users"
-	tagX_edo_code_tokens = "X-Edo-Code-Tokens"
+	tagContent_type            = "Content-Type"
+	tagX_auth_from_id          = "X-Auth-From-Id"
+	tagX_auth_user             = "X-Auth-User"
+	tagX_auth_user_tag         = "X-Auth-User-Tag"
+	tagX_auth_users            = "X-Auth-Users"
+	tagX_edo_code_tokens       = "X-Edo-Code-Tokens"
+	tagX_edo_cooperation_error = "X-Edo-Cooperation-Error"
 )
 
 const (
