@@ -153,6 +153,44 @@ EOF
 
 
  # ############################################################
+ redis_path=$(pwd)/redis.sock
+ cat <<EOF > redis.sock.conf
+daemonize yes
+unixsocket ${redis_path}
+EOF
+ ${REDIS_SERVER} redis.sock.conf
+ close_script="${close_script}; ${REDIS_CLIENT} -s ${redis_path} shutdown"
+ trap "${close_script}" EXIT
+ while ! [ -e ${redis_path} ]; do
+     sleep ${INTERVAL}
+ done
+
+ cat <<EOF > ${nginx_prefix}/conf/nginx.conf
+events {}
+http {
+    lua_package_path '\${prefix}lua/?.lua;;';
+    server {
+        listen       ${NGINX_PORT};
+        location / {
+            set \$redis_address unix:${redis_path};
+            access_by_lua_file lua/test/redis_wrapper.lua;
+        }
+    }
+}
+EOF
+ ${NGINX_DIR}/sbin/nginx -p ${nginx_prefix} -s reload
+ sleep ${INTERVAL}
+
+ result=$(curl -o out -s -w "%{http_code}" http://localhost:${NGINX_PORT})
+ if [ "${result}" != "200" ]; then
+     echo ${result} 1>&2
+     cat out 1>&2
+     exit 1
+ fi
+ echo "===== redis (unix socket) passed ====="
+
+
+ # ############################################################
  cat <<EOF > ${nginx_prefix}/conf/nginx.conf
 events {}
 http {
