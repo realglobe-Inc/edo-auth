@@ -30,8 +30,7 @@ local redis_address = ngx.var.edo_redis_address or "127.0.0.1:6379"
 local redis_timeout = ngx.var.edo_redis_timeout or 30 * 1000 -- 30 秒。
 -- $edo_redis_keepalive: redis ソケットの待機時間 (ミリ秒)。
 local redis_keepalive = ngx.var.edo_redis_keepalive or 60 * 1000 -- 1 分。
--- $edo_redis_pool_size: 1 ワーカー当たりの redis ソケット確保数。
--- 1 で十分かと思ったが、ab とかやってみるとそうではなさそう。
+-- $edo_redis_pool_size: 1 ワーカー当たりの待機させる redis 接続数。
 local redis_pool_size = ngx.var.edo_redis_pool_size or 16
 -- $edo_redis_session_tag: セッションを redis に格納する際のキーの接頭辞。
 local redis_session_tag = ngx.var.edo_redis_session_tag or "asession"
