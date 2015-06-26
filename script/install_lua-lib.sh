@@ -20,11 +20,8 @@
 
 
 lua_cjson_ver=${lua_cjson_ver:=2.1.0}
-lua_openssl_ver=${lua_openssl_ver:=f3b007f}
 lua_resty_redis_ver=${lua_resty_redis_ver:=688f932}
 luajit_ver=${luajit_ver:=2.0.3}
-openssl_ver=${openssl_ver:=1.0.2a}
-zlib_ver=${zlib_ver:=1.2.8}
 
 project_dir=$(cd $(dirname $0)/.. && pwd)
 

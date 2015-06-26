@@ -18,7 +18,7 @@ local redis_wrapper = require("lib.redis_wrapper")
 
 -- 成功したら 200 OK を返す。
 
-local client, err = redis_wrapper.new(ngx.var.redis_host, ngx.var.redis_port, 1000, 10 * 1000, 16)
+local client, err = redis_wrapper.new(ngx.var.redis_address, 1000, 10 * 1000, 16)
 if err then
    return test.response_error("new failed: " .. err)
 end

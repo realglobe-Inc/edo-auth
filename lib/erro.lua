@@ -62,15 +62,10 @@ local function respond_html(params)
    return ngx.exit(status)
 end
 
+
 local function respond_json(params)
-   local status = ngx.HTTP_INTERNAL_SERVER_ERROR
-   local message = "error occurred"
-   if params.status then
-      status = params.status
-   end
-   if params.message then
-      message = params.message
-   end
+   local status = params.status or ngx.HTTP_INTERNAL_SERVER_ERROR
+   local message = params.message or "error occurred"
 
    local body, err = cjson.encode(params)
    if err then
@@ -86,6 +81,7 @@ local function respond_json(params)
    ngx.print(body)
    return ngx.exit(status)
 end
+
 
 return {
    respond_html = respond_html,

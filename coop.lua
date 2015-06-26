@@ -24,16 +24,13 @@ local session_db = require("lib.coop_session_db")
 
 -- $edo_log_level: デバッグログのレベル。
 local log_level = varutil.get_level(ngx.var.edo_log_level)
--- $edo_redis_host: redis のアドレス。
-local redis_host = ngx.var.edo_redis_host or "127.0.0.1"
--- $edo_redis_port: redis のポート。
-local redis_port = ngx.var.edo_redis_port or 6379
+-- $edo_redis_address: redis のアドレス。
+local redis_address = ngx.var.edo_redis_address or "127.0.0.1:6379"
 -- $edo_redis_timeout: redis の接続待ち時間 (ミリ秒)。
 local redis_timeout = ngx.var.edo_redis_timeout or 30 * 1000 -- 30 秒。
 -- $edo_redis_keepalive: redis ソケットの待機時間 (ミリ秒)。
 local redis_keepalive = ngx.var.edo_redis_keepalive or 60 * 1000 -- 1 分。
--- $edo_redis_pool_size: 1 ワーカー当たりの redis ソケット確保数。
--- 1 で十分かと思ったが、ab とかやってみるとそうではなさそう。
+-- $edo_redis_pool_size: 1 ワーカー当たりの待機させる redis 接続数。
 local redis_pool_size = ngx.var.edo_redis_pool_size or 16
 -- $edo_redis_session_tag: セッションを redis に格納する際のキーの接頭辞。
 local redis_session_tag = ngx.var.edo_redis_session_tag or "csession"
@@ -60,6 +57,17 @@ local function get_session(cookie)
 end
 
 
+-- X-Edo-Cooperation-Error ヘッダを付けて返信する。
+local function respond_json(params)
+   if params.message then
+      ngx.header["X-Edo-Cooperation-Error"] = params.message
+   else
+      ngx.header["X-Edo-Cooperation-Error"] = "error occurred"
+   end
+   return erro.respond_json(params)
+end
+
+
 -- ここから本編。
 
 
@@ -68,18 +76,18 @@ if session_id then
    -- セッションが宣言された。
    ngx.log(log_level, "TA session is declared")
 
-   local redis, err = redis_wrapper.new(redis_host, redis_port, redis_timeout, redis_keepalive, redis_pool_size)
+   local redis, err = redis_wrapper.new(redis_address, redis_timeout, redis_keepalive, redis_pool_size)
    if err then
-      return erro.respond_json({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "database error: " .. err})
+      return respond_json({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "database error: " .. err})
    end
    local database = session_db.new_redis(redis, redis_session_tag)
 
    local session, err = database:get(session_id)
    if err then
-      return erro.respond_json({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "database error: " .. err})
+      return respond_json({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "database error: " .. err})
    elseif not session then
       -- セッションが無かった。
-      return erro.respond_json({status = ngx.HTTP_FORBIDDEN, message = "invalid session"})
+      return respond_json({status = ngx.HTTP_FORBIDDEN, message = "invalid session"})
    end
 
    -- セッションがあった。
@@ -111,7 +119,7 @@ if not ngx.var.http_x_edo_code_tokens then
 
    if not params then
       -- 仲介コードが無かった。
-      return erro.respond_json({status = ngx.HTTP_FORBIDDEN, message = "no code tokens"})
+      return respond_json({status = ngx.HTTP_FORBIDDEN, message = "no code tokens"})
    end
 end
 
@@ -151,12 +159,12 @@ end
 ngx.req.set_header("X-Auth-User", account_info)
 local account_tag = resp.header["X-Auth-User-Tag"]
 if not account_tag then
-   return erro.respond_json({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "no account tag"})
+   return respond_json({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "no account tag"})
 end
 ngx.req.set_header("X-Auth-User-Tag", account_tag)
 local from_ta = resp.header["X-Auth-From-Id"]
 if not from_ta then
-   return erro.respond_json({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "no from-TA"})
+   return respond_json({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "no from-TA"})
 end
 ngx.req.set_header("X-Auth-From-Id", from_ta)
 local accounts_info = resp.header["X-Auth-Users"]
@@ -170,15 +178,15 @@ if session_id and session_exp_in and session_exp_in > 0 then
    -- セッションが宣言された。
    ngx.log(log_level, "TA session is declared")
 
-   local redis, err = redis_wrapper.new(redis_host, redis_port, redis_timeout, redis_keepalive, redis_pool_size)
+   local redis, err = redis_wrapper.new(redis_address, redis_timeout, redis_keepalive, redis_pool_size)
    if err then
-      return erro.respond_json({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "database error: " .. err})
+      return respond_json({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "database error: " .. err})
    end
    local database = session_db.new_redis(redis, redis_session_tag)
 
    local err = database:save(session.new(session_id, account_info, account_tag, from_ta, accounts_info), session_exp_in)
    if err then
-      return erro.respond_json({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "database error: " .. err})
+      return respond_json({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "database error: " .. err})
    end
 
    ngx.log(log_level, "saved account info")

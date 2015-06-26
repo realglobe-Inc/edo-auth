@@ -18,6 +18,7 @@ package coop
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/realglobe-Inc/edo-auth/database/token"
 	keydb "github.com/realglobe-Inc/edo-id-provider/database/key"
 	idpdb "github.com/realglobe-Inc/edo-idp-selector/database/idp"
@@ -123,6 +124,7 @@ func (this *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// panic 対策。
 	defer func() {
 		if rcv := recover(); rcv != nil {
+			w.Header().Set(tagX_edo_cooperation_error, fmt.Sprint(rcv))
 			idperr.RespondJson(w, r, erro.New(rcv), sender)
 			return
 		}
@@ -142,6 +144,7 @@ func (this *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer log.Info(sender, ": Handled cooperation request")
 
 	if err := (&environment{this, sender}).serve(w, r); err != nil {
+		w.Header().Set(tagX_edo_cooperation_error, erro.Unwrap(err).Error())
 		idperr.RespondJson(w, r, erro.Wrap(err), sender)
 		return
 	}
