@@ -82,8 +82,7 @@ http {
     server {
         listen       ${NGINX_PORT};
         location / {
-            set \$redis_host 127.0.0.1;
-            set \$redis_port ${REDIS_PORT};
+            set \$redis_address 127.0.0.1:${REDIS_PORT};
             access_by_lua_file lua/test/redis.lua;
         }
     }
@@ -133,8 +132,7 @@ http {
     server {
         listen       ${NGINX_PORT};
         location / {
-            set \$redis_host 127.0.0.1;
-            set \$redis_port ${REDIS_PORT};
+            set \$redis_address 127.0.0.1:${REDIS_PORT};
             access_by_lua_file lua/test/redis_wrapper.lua;
         }
     }
@@ -186,8 +184,7 @@ http {
     server {
         listen       ${NGINX_PORT};
         location / {
-            set \$redis_host 127.0.0.1;
-            set \$redis_port ${REDIS_PORT};
+            set \$redis_address 127.0.0.1:${REDIS_PORT};
             access_by_lua_file lua/test/auth_session_db.lua;
         }
     }
@@ -239,8 +236,7 @@ http {
     server {
         listen       ${NGINX_PORT};
         location / {
-            set \$redis_host 127.0.0.1;
-            set \$redis_port ${REDIS_PORT};
+            set \$redis_address 127.0.0.1:${REDIS_PORT};
             access_by_lua_file lua/test/coop_session_db.lua;
         }
     }

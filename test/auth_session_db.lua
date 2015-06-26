@@ -19,11 +19,10 @@ local session = require("lib.auth_session")
 local session_db = require("lib.auth_session_db")
 
 
--- redis_host: redis のホスト名。
--- redis_port: redis のポート番号。
+-- redis_address: redis のアドレス。
 -- 成功したら 200 OK を返す。
 
-local client, err = redis_wrapper.new(ngx.var.redis_host, ngx.var.redis_port, 1000, 10 * 1000, 16)
+local client, err = redis_wrapper.new(ngx.var.redis_address, 1000, 10 * 1000, 16)
 if err then
    return test.response_error("redis_wrapper.new failed: " .. err)
 end

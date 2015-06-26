@@ -23,10 +23,8 @@ local session_db = require("lib.auth_session_db")
 
 -- $edo_log_level: デバッグログのレベル。
 local log_level = varutil.get_level(ngx.var.edo_log_level)
--- $edo_redis_host: redis のアドレス。
-local redis_host = ngx.var.edo_redis_host or "127.0.0.1"
--- $edo_redis_port: redis のポート。
-local redis_port = ngx.var.edo_redis_port or 6379
+-- $edo_redis_address: redis のアドレス。
+local redis_address = ngx.var.edo_redis_address or "127.0.0.1:6379"
 -- $edo_redis_timeout: redis の接続待ち時間 (ミリ秒)。
 local redis_timeout = ngx.var.edo_redis_timeout or 30 * 1000 -- 30 秒。
 -- $edo_redis_keepalive: redis ソケットの待機時間 (ミリ秒)。
@@ -45,7 +43,7 @@ local backend_location = ngx.var.edo_backend_location or "@backend"
 -- ここから本編。
 
 
-local redis, err = redis_wrapper.new(redis_host, redis_port, redis_timeout, redis_keepalive, redis_pool_size)
+local redis, err = redis_wrapper.new(redis_address, redis_timeout, redis_keepalive, redis_pool_size)
 if err then
    return erro.respond_html({status = ngx.HTTP_INTERNAL_SERVER_ERROR, message = "database error: " .. err})
 end

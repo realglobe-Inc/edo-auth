@@ -17,8 +17,7 @@ local redis = require("resty.redis")
 
 -- redis ドライバのラッパー。
 
--- host      -- redis サーバーのホスト名。
--- port      -- redis サーバーのポート番号。
+-- address   -- redis サーバーのアドレス。
 -- keepalive -- 接続をプールしておく期間。ミリ秒。
 -- pool_size -- 接続をプールする数。
 -- base      -- 接続。
@@ -29,7 +28,7 @@ local redis_wrapper = {
    -- 接続またはプールから取り出す。
    -- retuen: ok, err
    connect = function(self)
-      return self.base:connect(self.host, self.port)
+      return self.base:connect(self.address)
    end,
 
    -- 接続をプールする。
@@ -43,7 +42,7 @@ local redis_wrapper = {
 
 -- redis ドライバのラッパーを作成する。
 -- timeout: 応答待ちの制限時間。ミリ秒。
-local new = function(host, port, timeout, keepalive, pool_size)
+local new = function(address, timeout, keepalive, pool_size)
    local base, err = redis:new()
    if err then
       return nil, err
@@ -51,8 +50,7 @@ local new = function(host, port, timeout, keepalive, pool_size)
    base:set_timeout(timeout)
 
    local obj = {
-      host = host,
-      port = port,
+      address = address,
       keepalive = keepalive,
       pool_size = pool_size,
       base = base,
