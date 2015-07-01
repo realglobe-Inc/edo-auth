@@ -16,6 +16,7 @@ local test = require("test.test")
 local redis_wrapper = require("lib.redis_wrapper")
 
 
+-- redis_address: redis のアドレス。
 -- 成功したら 200 OK を返す。
 
 local client, err = redis_wrapper.new(ngx.var.redis_address, 1000, 10 * 1000, 16)
