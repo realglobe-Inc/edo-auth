@@ -19,12 +19,12 @@
 
 
 headers_more_ver=${headers_more_ver:=v0.26}
-lua_nginx_ver=${lua_nginx_ver:=v0.9.15}
+lua_nginx_ver=${lua_nginx_ver:=v0.9.16}
 luajit_ver=${luajit_ver:=2.0.3}
 nginx_ver=${nginx_ver:=1.7.10}
 ngx_devel_kit_ver=${ngx_devel_kit_ver:=v0.2.19}
-openssl_ver=${openssl_ver:=1.0.2b}
-pcre_ver=${pcre_ver:=8.36}
+openssl_ver=${openssl_ver:=1.0.2c}
+pcre_ver=${pcre_ver:=8.37}
 zlib_ver=${zlib_ver:=1.2.8}
 
 project_dir=$(cd $(dirname $0)/.. && pwd)

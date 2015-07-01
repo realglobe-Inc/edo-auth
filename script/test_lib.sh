@@ -75,7 +75,6 @@ EOF
 
  # redis が立った。
 
- cp -r ${PROJECT_DIR}/test ${nginx_prefix}/lua/
  cat <<EOF > ${nginx_prefix}/conf/nginx.conf
 events {}
 http {
