@@ -35,7 +35,7 @@ import (
 )
 
 func init() {
-	logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	logutil.SetupConsole(logRoot, level.OFF)
 }
 
 type testIdProvider struct {
@@ -82,8 +82,8 @@ func (this *testIdProvider) addResponse(status int, header http.Header, body []b
 // X-Auth-User ヘッダに追加属性を入れることの検査。
 func TestCallback(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	idpServ, err := newTestIdProvider([]jwk.Key{test_idpKey})
@@ -239,8 +239,8 @@ func TestCallback(t *testing.T) {
 // 選択サービス経由のリクエストに対応できることの検査。
 func TestCallbackThroughSelector(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	idpServ, err := newTestIdProvider([]jwk.Key{test_idpKey})
@@ -290,8 +290,8 @@ func TestCallbackThroughSelector(t *testing.T) {
 // state がおかしいなら拒否できることの検査。
 func TestCallbackDenyInvalidState(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	idpServ, err := newTestIdProvider([]jwk.Key{test_idpKey})
@@ -328,8 +328,8 @@ func TestCallbackDenyInvalidState(t *testing.T) {
 // nonce がおかしいなら拒否できることの検査。
 func TestCallbackDenyInvalidNonce(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	idpServ, err := newTestIdProvider([]jwk.Key{test_idpKey})
@@ -372,8 +372,8 @@ func TestCallbackDenyInvalidNonce(t *testing.T) {
 // c_hash がおかしいなら拒否できることの検査。
 func TestCallbackDenyInvalidCodeHash(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	idpServ, err := newTestIdProvider([]jwk.Key{test_idpKey})
@@ -405,8 +405,8 @@ func TestCallbackDenyInvalidCodeHash(t *testing.T) {
 // at_hash がおかしいなら拒否できることの検査。
 func TestCallbackDenyInvalidTokenHash(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	idpServ, err := newTestIdProvider([]jwk.Key{test_idpKey})
