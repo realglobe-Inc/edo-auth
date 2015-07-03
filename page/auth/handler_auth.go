@@ -27,12 +27,12 @@ import (
 
 // ユーザー認証開始。
 func (this *Page) HandleAuth(w http.ResponseWriter, r *http.Request) {
-	var sender *request.Request
+	var logPref string
 
 	// panic 対策。
 	defer func() {
 		if rcv := recover(); rcv != nil {
-			server.RespondErrorHtml(w, r, erro.New(rcv), this.errTmpl, sender.String()+": ")
+			server.RespondErrorHtml(w, r, erro.New(rcv), this.errTmpl, logPref)
 			return
 		}
 	}()
@@ -42,16 +42,15 @@ func (this *Page) HandleAuth(w http.ResponseWriter, r *http.Request) {
 		defer this.stopper.Unstop()
 	}
 
-	//////////////////////////////
-	server.LogRequest(level.DEBUG, r, this.debug)
-	//////////////////////////////
+	logPref = server.ParseSender(r) + ": "
 
-	sender = request.Parse(r, this.sessLabel)
-	log.Info(sender, ": Received authentication request")
-	defer log.Info(sender, ": Handled authentication request")
+	server.LogRequest(level.DEBUG, r, this.debug, logPref)
 
-	if err := (&environment{this, sender, nil}).authServe(w, r); err != nil {
-		server.RespondErrorHtml(w, r, erro.Wrap(err), this.errTmpl, sender.String()+": ")
+	log.Info(logPref, "Received authentication request")
+	defer log.Info(logPref, "Handled authentication request")
+
+	if err := (&environment{this, logPref, "", nil}).authServe(w, r); err != nil {
+		server.RespondErrorHtml(w, r, erro.Wrap(err), this.errTmpl, logPref)
 		return
 	}
 	return
@@ -63,7 +62,7 @@ func (this *environment) authServe(w http.ResponseWriter, r *http.Request) error
 		return erro.Wrap(server.NewError(http.StatusBadRequest, erro.Unwrap(err).Error(), err))
 	}
 
-	log.Debug(this.sender, ": Parsed authentication request")
+	log.Debug(this.logPref, "Parsed authentication request")
 
 	authUri := req.authUri()
 	queries := authUri.Query()
@@ -78,11 +77,11 @@ func (this *environment) authServe(w http.ResponseWriter, r *http.Request) error
 		return erro.Wrap(err)
 	} else if len(idps) == 1 {
 		idp = idps[0].Id()
-		log.Debug(this.sender, ": Destination is in ID provider "+idp)
+		log.Debug(this.logPref, "Destination is in ID provider "+idp)
 	} else {
 		// ID プロバイダ選択サービスか何か。
 		respType[tagId_token] = true
-		log.Debug(this.sender, ": Destination "+rawAuthUri+" is not ID provider")
+		log.Debug(this.logPref, "Destination "+rawAuthUri+" is not ID provider")
 	}
 	queries.Set(tagResponse_type, request.ValueSetForm(respType))
 
@@ -90,7 +89,7 @@ func (this *environment) authServe(w http.ResponseWriter, r *http.Request) error
 	if scop := request.FormValueSet(queries.Get(tagScope)); !scop[tagOpenid] {
 		scop[tagOpenid] = true
 		queries.Set(tagScope, request.ValueSetForm(scop))
-		log.Debug(this.sender, `: Added scope "`+tagOpenid+`"`)
+		log.Debug(this.logPref, `: Added scope "`+tagOpenid+`"`)
 	}
 
 	// client_id
@@ -98,9 +97,9 @@ func (this *environment) authServe(w http.ResponseWriter, r *http.Request) error
 	if ta == "" {
 		ta = this.selfId
 		queries.Set(tagClient_id, ta)
-		log.Debug(this.sender, ": Act as default TA "+ta)
+		log.Debug(this.logPref, "Act as default TA "+ta)
 	} else {
-		log.Debug(this.sender, ": Act as TA "+ta)
+		log.Debug(this.logPref, "Act as TA "+ta)
 	}
 
 	// redirect_uri
@@ -108,20 +107,20 @@ func (this *environment) authServe(w http.ResponseWriter, r *http.Request) error
 	if rediUri == "" {
 		rediUri = this.rediUri
 		queries.Set(tagRedirect_uri, rediUri)
-		log.Debug(this.sender, ": Use default redirect uri "+rediUri)
+		log.Debug(this.logPref, "Use default redirect uri "+rediUri)
 	} else {
-		log.Debug(this.sender, ": Use redirect uri "+rediUri)
+		log.Debug(this.logPref, "Use redirect uri "+rediUri)
 	}
 
 	// state
 	stat := this.idGen.String(this.statLen)
 	queries.Set(tagState, stat)
-	log.Debug(this.sender, ": Use state "+logutil.Mosaic(stat))
+	log.Debug(this.logPref, "Use state "+logutil.Mosaic(stat))
 
 	// nonce
 	nonc := this.idGen.String(this.noncLen)
 	queries.Set(tagNonce, nonc)
-	log.Debug(this.sender, ": Use nonce "+logutil.Mosaic(nonc))
+	log.Debug(this.logPref, "Use nonce "+logutil.Mosaic(nonc))
 
 	authUri.RawQuery = queries.Encode()
 
@@ -138,7 +137,7 @@ func (this *environment) authServe(w http.ResponseWriter, r *http.Request) error
 	if err := this.sessDb.Save(sess, sess.Expires().Add(this.sessDbExpIn-this.sessExpIn)); err != nil {
 		return erro.Wrap(err)
 	}
-	log.Info(this.sender, ": Generated user session "+logutil.Mosaic(sess.Id()))
+	log.Info(this.logPref, "Generated user session "+logutil.Mosaic(sess.Id()))
 
 	http.SetCookie(w, this.newCookie(sess.Id(), sess.Expires()))
 	w.Header().Add(tagCache_control, tagNo_store)
@@ -146,6 +145,6 @@ func (this *environment) authServe(w http.ResponseWriter, r *http.Request) error
 
 	uri := authUri.String()
 	http.Redirect(w, r, uri, http.StatusFound)
-	log.Info(this.sender, ": Redirect to "+uri)
+	log.Info(this.logPref, "Redirect to "+uri)
 	return nil
 }

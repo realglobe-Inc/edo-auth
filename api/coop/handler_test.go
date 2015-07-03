@@ -36,7 +36,7 @@ import (
 )
 
 func init() {
-	logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	logutil.SetupConsole(logRoot, level.OFF)
 }
 
 func newTestHandler(keys []jwk.Key, idps []idpdb.Element) *handler {
@@ -106,8 +106,8 @@ func (this *testIdProvider) addResponse(status int, header http.Header, body []b
 // 主体でないアカウント情報が iss, sub クレームを含むことの検査。
 func TestSingleNormal(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	idpServ, err := newTestIdProvider([]jwk.Key{test_idpKey})
@@ -226,8 +226,8 @@ func TestSingleNormal(t *testing.T) {
 // ID プロバイダからエラーが返されたら、エラーを返せることの検査。
 func TestDenyIdProviderError(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	idpServ, err := newTestIdProvider([]jwk.Key{test_idpKey})
@@ -276,8 +276,8 @@ func TestDenyIdProviderError(t *testing.T) {
 // 主体でないアカウント情報が iss, sub クレームを含むことの検査。
 func TestMultiNormal(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	idpServ, err := newTestIdProvider([]jwk.Key{test_idpKey})
@@ -448,8 +448,8 @@ func TestMultiNormal(t *testing.T) {
 // 仲介データの JWT の署名がおかしかったらエラーを返すことの検査。
 func TestDenyInvalidSign(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	idpServ, err := newTestIdProvider([]jwk.Key{test_idpKey})
@@ -491,8 +491,8 @@ func TestDenyInvalidSign(t *testing.T) {
 // 仲介データに iss が無かったらエラーを返すことの検査。
 func TestDenyNoIss(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	testSingleDenyNoSomething(t, "iss")
@@ -501,8 +501,8 @@ func TestDenyNoIss(t *testing.T) {
 // 仲介データに sub が無かったらエラーを返すことの検査。
 func TestDenyNoSub(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	testSingleDenyNoSomething(t, "sub")
@@ -511,8 +511,8 @@ func TestDenyNoSub(t *testing.T) {
 // 仲介データに aud が無かったらエラーを返すことの検査。
 func TestDenyNoAud(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	testSingleDenyNoSomething(t, "aud")
@@ -521,8 +521,8 @@ func TestDenyNoAud(t *testing.T) {
 // 仲介コードが 1 つの場合に、仲介データに from_client が無かったらエラーを返すことの検査。
 func TestSingleDenyNoFromClient(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	testSingleDenyNoSomething(t, "from_client")
@@ -531,8 +531,8 @@ func TestSingleDenyNoFromClient(t *testing.T) {
 // 仲介コードが 1 つの場合に、仲介データに user_tag が無かったらエラーを返すことの検査。
 func TestSingleDenyNoUserTag(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	testSingleDenyNoSomething(t, "user_tag")
@@ -577,8 +577,8 @@ func testSingleDenyNoSomething(t *testing.T, something string) {
 // 仲介コードが 2 つ以上の場合に、仲介データに ref_hash が無かったらエラーを返すことの検査。
 func TestMultiDenyNoRefHash(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	testMultiDenyNoSomething(t, "ref_hash", "")
@@ -588,8 +588,8 @@ func TestMultiDenyNoRefHash(t *testing.T) {
 // 仲介コードが 2 つ以上の場合に、仲介データに user_tags が無かったらエラーを返すことの検査。
 func TestMultiDenyNoUserTags(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	testMultiDenyNoSomething(t, "", "user_tags")
@@ -597,8 +597,8 @@ func TestMultiDenyNoUserTags(t *testing.T) {
 
 func testMultiDenyNoSomething(t *testing.T, something1, something2 string) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	idpServ, err := newTestIdProvider([]jwk.Key{test_idpKey})
@@ -654,8 +654,8 @@ func testMultiDenyNoSomething(t *testing.T, something1, something2 string) {
 // アカウントタグが重複したらエラーを返すことの検査。
 func TestMultiDenyAccountTagOverlap(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	idpServ, err := newTestIdProvider([]jwk.Key{test_idpKey})
@@ -711,8 +711,8 @@ func TestMultiDenyAccountTagOverlap(t *testing.T) {
 // セッションを発行できることの検査。
 func TestSession(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	idpServ, err := newTestIdProvider([]jwk.Key{test_idpKey})
@@ -776,8 +776,8 @@ func TestSession(t *testing.T) {
 // ID プロバイダからアクセストークンが帰って来なかったら拒否できること検査。
 func TestDenyNoAccessTokenFromIdProvider(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	testDenyNoSomethingFromIdProvider(t, "access_token", "")
@@ -786,8 +786,8 @@ func TestDenyNoAccessTokenFromIdProvider(t *testing.T) {
 // ID プロバイダから ids_token が帰って来なかったら拒否できること検査。
 func TestDenyNoIdsTokenFromIdProvider(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	testDenyNoSomethingFromIdProvider(t, "ids_token", "")
@@ -796,8 +796,8 @@ func TestDenyNoIdsTokenFromIdProvider(t *testing.T) {
 // ID プロバイダから ids_token の iss が帰って来なかったら拒否できること検査。
 func TestDenyNoIdsTokenIssFromIdProvider(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	testDenyNoSomethingFromIdProvider(t, "", "iss")
@@ -806,8 +806,8 @@ func TestDenyNoIdsTokenIssFromIdProvider(t *testing.T) {
 // ID プロバイダから ids_token の sub が帰って来なかったら拒否できること検査。
 func TestDenyNoIdsTokenSubFromIdProvider(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	testDenyNoSomethingFromIdProvider(t, "", "sub")
@@ -816,8 +816,8 @@ func TestDenyNoIdsTokenSubFromIdProvider(t *testing.T) {
 // ID プロバイダから ids_token の aud が帰って来なかったら拒否できること検査。
 func TestDenyNoIdsTokenAudFromIdProvider(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	testDenyNoSomethingFromIdProvider(t, "", "aud")
@@ -826,8 +826,8 @@ func TestDenyNoIdsTokenAudFromIdProvider(t *testing.T) {
 // ID プロバイダから ids_token の exp が帰って来なかったら拒否できること検査。
 func TestDenyNoIdsTokenExpFromIdProvider(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	testDenyNoSomethingFromIdProvider(t, "", "exp")
@@ -836,8 +836,8 @@ func TestDenyNoIdsTokenExpFromIdProvider(t *testing.T) {
 // ID プロバイダから ids_token の iat が帰って来なかったら拒否できること検査。
 func TestDenyNoIdsTokenIatFromIdProvider(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	testDenyNoSomethingFromIdProvider(t, "", "iat")
@@ -846,8 +846,8 @@ func TestDenyNoIdsTokenIatFromIdProvider(t *testing.T) {
 // ID プロバイダから ids_token の ids が帰って来なかったら拒否できること検査。
 func TestDenyNoIdsTokenIdsFromIdProvider(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	testDenyNoSomethingFromIdProvider(t, "", "ids")

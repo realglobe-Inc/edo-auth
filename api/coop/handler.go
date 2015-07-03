@@ -23,7 +23,6 @@ import (
 	keydb "github.com/realglobe-Inc/edo-id-provider/database/key"
 	idpdb "github.com/realglobe-Inc/edo-idp-selector/database/idp"
 	idperr "github.com/realglobe-Inc/edo-idp-selector/error"
-	requtil "github.com/realglobe-Inc/edo-idp-selector/request"
 	"github.com/realglobe-Inc/edo-lib/jwk"
 	"github.com/realglobe-Inc/edo-lib/jwt"
 	logutil "github.com/realglobe-Inc/edo-lib/log"
@@ -119,13 +118,13 @@ func (this *handler) newCookie(id string, exp time.Time) *http.Cookie {
 }
 
 func (this *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	var sender *requtil.Request
+	var logPref string
 
 	// panic 対策。
 	defer func() {
 		if rcv := recover(); rcv != nil {
 			w.Header().Set(tagX_edo_cooperation_error, fmt.Sprint(rcv))
-			idperr.RespondJson(w, r, erro.New(rcv), sender)
+			idperr.RespondJson(w, r, erro.New(rcv), logPref)
 			return
 		}
 	}()
@@ -135,17 +134,16 @@ func (this *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defer this.stopper.Unstop()
 	}
 
-	//////////////////////////////
-	server.LogRequest(level.DEBUG, r, this.debug)
-	//////////////////////////////
+	logPref = server.ParseSender(r) + ": "
 
-	sender = requtil.Parse(r, "")
-	log.Info(sender, ": Received cooperation request")
-	defer log.Info(sender, ": Handled cooperation request")
+	server.LogRequest(level.DEBUG, r, this.debug, logPref)
 
-	if err := (&environment{this, sender}).serve(w, r); err != nil {
+	log.Info(logPref, "Received cooperation request")
+	defer log.Info(logPref, "Handled cooperation request")
+
+	if err := (&environment{this, logPref}).serve(w, r); err != nil {
 		w.Header().Set(tagX_edo_cooperation_error, erro.Unwrap(err).Error())
-		idperr.RespondJson(w, r, erro.Wrap(err), sender)
+		idperr.RespondJson(w, r, erro.Wrap(err), logPref)
 		return
 	}
 }
@@ -154,7 +152,7 @@ func (this *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 type environment struct {
 	*handler
 
-	sender *requtil.Request
+	logPref string
 }
 
 func (this *environment) serve(w http.ResponseWriter, r *http.Request) error {
@@ -184,11 +182,11 @@ func (this *environment) serve(w http.ResponseWriter, r *http.Request) error {
 				return erro.Wrap(idperr.New(idperr.Invalid_request, "two main token", http.StatusBadRequest, nil))
 			}
 			acntTag = codTok.accountTag()
-			log.Debug(this.sender, ": Main account tag is "+acntTag)
+			log.Debug(this.logPref, "Main account tag is "+acntTag)
 			if codTok.fromTa() == "" {
 				return erro.Wrap(idperr.New(idperr.Invalid_request, "no from-TA in main token", http.StatusBadRequest, nil))
 			}
-			log.Debug(this.sender, ": From-TA is "+codTok.fromTa())
+			log.Debug(this.logPref, "From-TA is "+codTok.fromTa())
 		} else if len(codTok.accountTags()) == 0 {
 			return erro.Wrap(idperr.New(idperr.Invalid_request, "no account tags in sub token", http.StatusBadRequest, nil))
 		}
@@ -198,7 +196,7 @@ func (this *environment) serve(w http.ResponseWriter, r *http.Request) error {
 				return erro.Wrap(idperr.New(idperr.Invalid_request, "tag "+tag+" overlaps", http.StatusBadRequest, nil))
 			}
 			tags[tag] = true
-			log.Debug(this.sender, ": Account tag is "+tag)
+			log.Debug(this.logPref, "Account tag is "+tag)
 		}
 
 		if codTok.referralHash() != "" {
@@ -216,13 +214,13 @@ func (this *environment) serve(w http.ResponseWriter, r *http.Request) error {
 			return erro.Wrap(idperr.New(idperr.Invalid_request, "ID provider "+codTok.idProvider()+" is not exist", http.StatusBadRequest, nil))
 		}
 
-		log.Debug(this.sender, ": ID provider "+idp.Id()+" is exist")
+		log.Debug(this.logPref, "ID provider "+idp.Id()+" is exist")
 
 		if err := codTok.verify(idp.Keys()); err != nil {
 			return erro.Wrap(idperr.New(idperr.Invalid_request, erro.Unwrap(err).Error(), http.StatusBadRequest, err))
 		}
 
-		log.Debug(this.sender, ": Verified cooperation code")
+		log.Debug(this.logPref, "Verified cooperation code")
 
 		units = append(units, &idpUnit{idp, codTok})
 	}
@@ -230,7 +228,7 @@ func (this *environment) serve(w http.ResponseWriter, r *http.Request) error {
 		return erro.Wrap(idperr.New(idperr.Invalid_request, "no main account tag", http.StatusBadRequest, nil))
 	}
 
-	log.Debug(this.sender, ": Cooperation codes are OK")
+	log.Debug(this.logPref, "Cooperation codes are OK")
 
 	var tok *token.Element
 	var mainAttrs map[string]interface{}
@@ -244,13 +242,13 @@ func (this *environment) serve(w http.ResponseWriter, r *http.Request) error {
 			if err != nil {
 				return erro.Wrap(err)
 			}
-			log.Debug(this.sender, ": Got account info from main ID provider "+unit.idp.Id())
+			log.Debug(this.logPref, "Got account info from main ID provider "+unit.idp.Id())
 		} else {
 			fT, tToA, err = this.getInfoFromSubIdProvider(unit.idp, unit.codTok)
 			if err != nil {
 				return erro.Wrap(err)
 			}
-			log.Debug(this.sender, ": Got account info from sub ID provider "+unit.idp.Id())
+			log.Debug(this.logPref, "Got account info from sub ID provider "+unit.idp.Id())
 		}
 		for tag, attrs := range tToA {
 			if tag == acntTag {
@@ -270,7 +268,7 @@ func (this *environment) serve(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 
-	log.Debug(this.sender, ": Got all account info")
+	log.Debug(this.logPref, "Got all account info")
 
 	jt := jwt.New()
 	jt.SetHeader(tagAlg, tagNone)
@@ -312,7 +310,7 @@ func (this *environment) serve(w http.ResponseWriter, r *http.Request) error {
 	if sessFlag {
 		sessId := this.idGen.String(this.sessLen)
 		http.SetCookie(w, this.handler.newCookie(sessId, tok.Expires()))
-		log.Debug(this.sender, ": Report session "+logutil.Mosaic(sessId))
+		log.Debug(this.logPref, "Report session "+logutil.Mosaic(sessId))
 	}
 	return nil
 }
@@ -364,15 +362,15 @@ func (this *environment) getInfo(isMain bool, idp idpdb.Element, codTok *codeTok
 
 	r, err := http.NewRequest("POST", idp.CoopToUri(), bytes.NewReader(data))
 	r.Header.Set(tagContent_type, contTypeJson)
-	log.Debug(this.sender, ": Made main cooperation-to request")
+	log.Debug(this.logPref, "Made main cooperation-to request")
 
-	server.LogRequest(level.DEBUG, r, this.debug)
+	server.LogRequest(level.DEBUG, r, this.debug, this.logPref)
 	resp, err := this.httpClient().Do(r)
 	if err != nil {
 		return "", nil, nil, erro.Wrap(err)
 	}
 	defer resp.Body.Close()
-	server.LogResponse(level.DEBUG, resp, this.debug)
+	server.LogResponse(level.DEBUG, resp, this.debug, this.logPref)
 
 	if resp.StatusCode != http.StatusOK {
 		var buff struct {
@@ -417,12 +415,12 @@ func (this *environment) getInfo(isMain bool, idp idpdb.Element, codTok *codeTok
 		}
 		now := time.Now()
 		tok = token.New(coopResp.token(), this.idGen.String(this.tokTagLen), now.Add(coopResp.expiresIn()), idsTok.idProvider(), coopResp.scope())
-		log.Info(this.sender, ": Got access token "+logutil.Mosaic(tok.Id()))
+		log.Info(this.logPref, "Got access token "+logutil.Mosaic(tok.Id()))
 
 		if err := this.tokDb.Save(tok, now.Add(this.tokDbExpIn)); err != nil {
 			return "", nil, nil, erro.Wrap(err)
 		}
-		log.Info(this.sender, ": Saved access token "+logutil.Mosaic(tok.Id()))
+		log.Info(this.logPref, "Saved access token "+logutil.Mosaic(tok.Id()))
 	}
 
 	return idsTok.fromTa(), tok, tagToAttrs, nil

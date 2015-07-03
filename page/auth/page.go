@@ -21,7 +21,6 @@ import (
 	"github.com/realglobe-Inc/edo-auth/database/token"
 	keydb "github.com/realglobe-Inc/edo-id-provider/database/key"
 	idpdb "github.com/realglobe-Inc/edo-idp-selector/database/idp"
-	"github.com/realglobe-Inc/edo-idp-selector/request"
 	"github.com/realglobe-Inc/edo-lib/jwt"
 	logutil "github.com/realglobe-Inc/edo-lib/log"
 	"github.com/realglobe-Inc/edo-lib/rand"
@@ -150,8 +149,9 @@ func (this *Page) _newCookie(label, id string, exp time.Time) *http.Cookie {
 type environment struct {
 	*Page
 
-	sender *request.Request
-	sess   *asession.Element
+	logPref string
+	sessId  string
+	sess    *asession.Element
 }
 
 // 認可コードを使って、ID プロバイダからアクセストークンを取得する。
@@ -197,26 +197,26 @@ func (this *environment) getAccessToken(req *callbackRequest, idp idpdb.Element)
 	}
 	tokReq.Header.Set(tagContent_type, contTypeForm)
 
-	server.LogRequest(level.DEBUG, tokReq, this.debug)
+	server.LogRequest(level.DEBUG, tokReq, this.debug, this.logPref)
 	resp, err := (&http.Client{}).Do(tokReq)
 	if err != nil {
 		return nil, nil, erro.Wrap(err)
 	}
 	defer resp.Body.Close()
-	server.LogResponse(level.DEBUG, resp, this.debug)
-	log.Info(this.sender, ": Got token response from "+idp.Id())
+	server.LogResponse(level.DEBUG, resp, this.debug, this.logPref)
+	log.Info(this.logPref, "Got token response from "+idp.Id())
 
 	tokResp, err := parseTokenResponse(resp)
 	if err != nil {
 		return nil, nil, erro.Wrap(server.NewError(http.StatusForbidden, "cannot get access token", nil))
 	}
 	tok := token.New(tokResp.token(), this.idGen.String(this.tokTagLen), tokResp.expires(), idp.Id(), tokResp.scope())
-	log.Info(this.sender, ": Got access token "+logutil.Mosaic(tok.Id()))
+	log.Info(this.logPref, "Got access token "+logutil.Mosaic(tok.Id()))
 
 	if err := this.tokDb.Save(tok, time.Now().Add(this.tokDbExpIn)); err != nil {
 		return nil, nil, erro.Wrap(err)
 	}
-	log.Info(this.sender, ": Saved access token "+logutil.Mosaic(tok.Id()))
+	log.Info(this.logPref, "Saved access token "+logutil.Mosaic(tok.Id()))
 
 	idTok, err := parseIdToken(tokResp.idToken())
 	if err != nil {
@@ -230,7 +230,7 @@ func (this *environment) getAccessToken(req *callbackRequest, idp idpdb.Element)
 			return nil, nil, erro.Wrap(server.NewError(http.StatusForbidden, erro.Unwrap(err).Error(), err))
 		}
 	}
-	log.Info(this.sender, ": ID token is OK")
+	log.Info(this.logPref, "ID token is OK")
 
 	return tok, idTok, nil
 }
@@ -243,19 +243,19 @@ func (this *environment) getAccountInfo(req *callbackRequest, tok *token.Element
 	}
 	acntReq.Header.Set(tagAuthorization, tagBearer+" "+tok.Id())
 
-	server.LogRequest(level.DEBUG, acntReq, this.debug)
+	server.LogRequest(level.DEBUG, acntReq, this.debug, this.logPref)
 	resp, err := (&http.Client{}).Do(acntReq)
 	if err != nil {
 		return nil, erro.Wrap(err)
 	}
 	defer resp.Body.Close()
-	server.LogResponse(level.DEBUG, resp, this.debug)
-	log.Info(this.sender, ": Got account info response from "+idp.Id())
+	server.LogResponse(level.DEBUG, resp, this.debug, this.logPref)
+	log.Info(this.logPref, "Got account info response from "+idp.Id())
 
 	if err := json.NewDecoder(resp.Body).Decode(&attrs); err != nil {
 		return nil, erro.Wrap(err)
 	}
-	log.Info(this.sender, ": Got account info")
+	log.Info(this.logPref, "Got account info")
 
 	return attrs, nil
 }

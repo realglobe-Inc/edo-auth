@@ -30,7 +30,7 @@ import (
 )
 
 func init() {
-	logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	logutil.SetupConsole(logRoot, level.OFF)
 }
 
 // 正常に認証 URI にリダイレクトさせることの検査。
@@ -40,8 +40,8 @@ func init() {
 // セッションが発行されることの検査。
 func TestAuth(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	page := newTestPage([]jwk.Key{test_taKey}, []idpdb.Element{test_idp})
@@ -91,8 +91,8 @@ func TestAuth(t *testing.T) {
 // X-Auth-Uri ヘッダが無ければ拒否することの検査。
 func TestAuthDenyNoAuthUri(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	page := newTestPage([]jwk.Key{test_taKey}, []idpdb.Element{test_idp})
@@ -115,8 +115,8 @@ func TestAuthDenyNoAuthUri(t *testing.T) {
 // X-Auth-Uri が ID プロバイダでないなら response_type を code id_token にすることの検査。
 func TestAuthForSelector(t *testing.T) {
 	// ////////////////////////////////
-	// logutil.SetupConsole("github.com/realglobe-Inc", level.ALL)
-	// defer logutil.SetupConsole("github.com/realglobe-Inc", level.OFF)
+	// logutil.SetupConsole(logRoot, level.ALL)
+	// defer logutil.SetupConsole(logRoot, level.OFF)
 	// ////////////////////////////////
 
 	page := newTestPage([]jwk.Key{test_taKey}, []idpdb.Element{test_idp})
