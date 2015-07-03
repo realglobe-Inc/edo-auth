@@ -26,12 +26,12 @@ import (
 )
 
 func (this *Page) HandleCallback(w http.ResponseWriter, r *http.Request) {
-	var sender *request.Request
+	var logPref string
 
 	// panic 対策。
 	defer func() {
 		if rcv := recover(); rcv != nil {
-			server.RespondErrorHtml(w, r, erro.New(rcv), this.errTmpl, sender.String()+": ")
+			server.RespondErrorHtml(w, r, erro.New(rcv), this.errTmpl, logPref)
 			return
 		}
 	}()
@@ -45,30 +45,32 @@ func (this *Page) HandleCallback(w http.ResponseWriter, r *http.Request) {
 	server.LogRequest(level.DEBUG, r, this.debug)
 	//////////////////////////////
 
-	sender = request.Parse(r, this.sessLabel)
-	log.Info(sender, ": Received callback request")
-	defer log.Info(sender, ": Handled callback request")
+	sender := request.Parse(r, this.sessLabel)
+	logPref = sender.String() + ": "
 
-	if err := (&environment{this, sender, nil}).callbackServe(w, r); err != nil {
-		server.RespondErrorHtml(w, r, erro.Wrap(err), this.errTmpl, sender.String()+": ")
+	log.Info(logPref, "Received callback request")
+	defer log.Info(logPref, "Handled callback request")
+
+	if err := (&environment{this, logPref, sender.Session(), nil}).callbackServe(w, r); err != nil {
+		server.RespondErrorHtml(w, r, erro.Wrap(err), this.errTmpl, logPref)
 		return
 	}
 	return
 }
 
 func (this *environment) callbackServe(w http.ResponseWriter, r *http.Request) error {
-	if this.sender.Session() == "" {
+	if this.sessId == "" {
 		return erro.Wrap(server.NewError(http.StatusBadRequest, "no session ", nil))
 	}
 
-	sess, err := this.sessDb.Get(this.sender.Session())
+	sess, err := this.sessDb.Get(this.sessId)
 	if err != nil {
 		return erro.Wrap(err)
 	} else if sess == nil {
 		return erro.Wrap(server.NewError(http.StatusBadRequest, "declared user session is not exist", nil))
 	}
 	this.sess = sess
-	log.Debug(this.sender, ": Declared user session is exist")
+	log.Debug(this.logPref, "Declared user session is exist")
 
 	savedDate := sess.Date()
 	sess.Invalidate()
@@ -83,7 +85,7 @@ func (this *environment) callbackServe(w http.ResponseWriter, r *http.Request) e
 		return erro.Wrap(server.NewError(http.StatusBadRequest, erro.Unwrap(err).Error(), err))
 	}
 
-	log.Debug(this.sender, ": Parsed callback request")
+	log.Debug(this.logPref, "Parsed callback request")
 
 	if req.state() != sess.State() {
 		return erro.Wrap(server.NewError(http.StatusForbidden, "invalid state", nil))
@@ -99,7 +101,7 @@ func (this *environment) callbackServe(w http.ResponseWriter, r *http.Request) e
 		} else if idp == nil {
 			return erro.Wrap(server.NewError(http.StatusBadRequest, "ID provider "+sess.IdProvider()+" is not exist", nil))
 		}
-		log.Debug(this.sender, ": ID provider "+idp.Id()+" is exist")
+		log.Debug(this.logPref, "ID provider "+idp.Id()+" is exist")
 	} else {
 		idTok, err := parseIdToken(req.idToken())
 		if err != nil {
@@ -112,7 +114,7 @@ func (this *environment) callbackServe(w http.ResponseWriter, r *http.Request) e
 		} else if idp == nil {
 			return erro.Wrap(server.NewError(http.StatusBadRequest, "ID provider "+idTok.idProvider()+" is not exist", nil))
 		}
-		log.Debug(this.sender, ": ID provider "+idp.Id()+" is exist")
+		log.Debug(this.logPref, "ID provider "+idp.Id()+" is exist")
 
 		if idTok.nonce() != sess.Nonce() {
 			return erro.Wrap(server.NewError(http.StatusForbidden, "invalid nonce", nil))
@@ -122,7 +124,7 @@ func (this *environment) callbackServe(w http.ResponseWriter, r *http.Request) e
 			return erro.Wrap(server.NewError(http.StatusForbidden, erro.Unwrap(err).Error(), err))
 		}
 		attrs1 = idTok.attributes()
-		log.Debug(this.sender, ": ID token is OK")
+		log.Debug(this.logPref, "ID token is OK")
 	}
 
 	// アクセストークンを取得する。
@@ -156,7 +158,7 @@ func (this *environment) callbackServe(w http.ResponseWriter, r *http.Request) e
 	now := time.Now()
 	http.SetCookie(w, this.newCookie(sess.Id(), now.Add(-time.Second)))
 	http.SetCookie(w, this.newFrontCookie(this.idGen.String(this.fsessLen), now.Add(this.fsessExpIn)))
-	log.Info(this.sender, ": Upgrade user session to frontend session")
+	log.Info(this.logPref, "Upgrade user session to frontend session")
 
 	// フロントエンドが使うので保存しなくて良い。
 
@@ -165,6 +167,6 @@ func (this *environment) callbackServe(w http.ResponseWriter, r *http.Request) e
 	w.Header().Add(tagPragma, tagNo_cache)
 
 	http.Redirect(w, r, sess.Path(), http.StatusFound)
-	log.Info(this.sender, ": Redirect to "+sess.Path())
+	log.Info(this.logPref, "Redirect to "+sess.Path())
 	return nil
 }
