@@ -111,7 +111,7 @@ func serve(param *parameters) (err error) {
 		return erro.New("invalid web data DB type " + param.webDbType)
 	}
 
-	// IdP 情報。
+	// ID プロバイダ情報。
 	var idpDb idpdb.Db
 	switch param.idpDbType {
 	case "mongo":
