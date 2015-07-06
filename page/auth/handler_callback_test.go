@@ -16,6 +16,14 @@ package auth
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"reflect"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/realglobe-Inc/edo-auth/database/asession"
 	idpdb "github.com/realglobe-Inc/edo-idp-selector/database/idp"
 	"github.com/realglobe-Inc/edo-lib/jwk"
@@ -25,13 +33,6 @@ import (
 	"github.com/realglobe-Inc/edo-lib/test"
 	"github.com/realglobe-Inc/go-lib/erro"
 	"github.com/realglobe-Inc/go-lib/rglog/level"
-	"net/http"
-	"net/http/httptest"
-	"net/url"
-	"reflect"
-	"strings"
-	"testing"
-	"time"
 )
 
 func init() {

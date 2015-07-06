@@ -15,18 +15,19 @@
 package auth
 
 import (
-	idpdb "github.com/realglobe-Inc/edo-idp-selector/database/idp"
-	"github.com/realglobe-Inc/edo-idp-selector/request"
-	"github.com/realglobe-Inc/edo-lib/jwk"
-	logutil "github.com/realglobe-Inc/edo-lib/log"
-	"github.com/realglobe-Inc/edo-lib/strset/strsetutil"
-	"github.com/realglobe-Inc/go-lib/rglog/level"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"reflect"
 	"regexp"
 	"testing"
+
+	idpdb "github.com/realglobe-Inc/edo-idp-selector/database/idp"
+	"github.com/realglobe-Inc/edo-idp-selector/request"
+	"github.com/realglobe-Inc/edo-lib/jwk"
+	logutil "github.com/realglobe-Inc/edo-lib/log"
+	"github.com/realglobe-Inc/edo-lib/strset/strsetutil"
+	"github.com/realglobe-Inc/go-lib/rglog/level"
 )
 
 func init() {

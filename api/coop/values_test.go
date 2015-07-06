@@ -16,14 +16,15 @@ package coop
 
 import (
 	"encoding/json"
+	"net/http"
+	"time"
+
 	idpdb "github.com/realglobe-Inc/edo-idp-selector/database/idp"
 	tadb "github.com/realglobe-Inc/edo-idp-selector/database/ta"
 	"github.com/realglobe-Inc/edo-lib/jwk"
 	"github.com/realglobe-Inc/edo-lib/jwt"
 	"github.com/realglobe-Inc/edo-lib/jwt/audience"
 	"github.com/realglobe-Inc/go-lib/erro"
-	"net/http"
-	"time"
 )
 
 const (

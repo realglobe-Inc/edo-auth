@@ -15,8 +15,9 @@
 package auth
 
 import (
-	"github.com/realglobe-Inc/edo-lib/jwk"
 	"testing"
+
+	"github.com/realglobe-Inc/edo-lib/jwk"
 )
 
 func TestIdToken(t *testing.T) {

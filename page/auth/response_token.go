@@ -16,10 +16,11 @@ package auth
 
 import (
 	"encoding/json"
-	"github.com/realglobe-Inc/edo-idp-selector/request"
-	"github.com/realglobe-Inc/go-lib/erro"
 	"net/http"
 	"time"
+
+	"github.com/realglobe-Inc/edo-idp-selector/request"
+	"github.com/realglobe-Inc/go-lib/erro"
 )
 
 type tokenResponse struct {

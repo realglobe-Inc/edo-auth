@@ -15,14 +15,15 @@
 package auth
 
 import (
+	"net/http"
+	"time"
+
 	"github.com/realglobe-Inc/edo-auth/database/asession"
 	"github.com/realglobe-Inc/edo-idp-selector/request"
 	logutil "github.com/realglobe-Inc/edo-lib/log"
 	"github.com/realglobe-Inc/edo-lib/server"
 	"github.com/realglobe-Inc/go-lib/erro"
 	"github.com/realglobe-Inc/go-lib/rglog/level"
-	"net/http"
-	"time"
 )
 
 // ユーザー認証開始。

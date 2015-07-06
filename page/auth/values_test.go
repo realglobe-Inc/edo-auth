@@ -16,14 +16,15 @@ package auth
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/url"
+	"time"
+
 	hashutil "github.com/realglobe-Inc/edo-id-provider/hash"
 	idpdb "github.com/realglobe-Inc/edo-idp-selector/database/idp"
 	"github.com/realglobe-Inc/edo-lib/jwk"
 	"github.com/realglobe-Inc/edo-lib/jwt"
 	"github.com/realglobe-Inc/go-lib/erro"
-	"net/http"
-	"net/url"
-	"time"
 )
 
 const (

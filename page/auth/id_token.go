@@ -17,6 +17,7 @@ package auth
 import (
 	"bytes"
 	"encoding/json"
+
 	"github.com/realglobe-Inc/edo-lib/base64url"
 	"github.com/realglobe-Inc/edo-lib/hash"
 	"github.com/realglobe-Inc/edo-lib/jwk"

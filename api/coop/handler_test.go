@@ -16,6 +16,12 @@ package coop
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"regexp"
+	"testing"
+	"time"
+
 	"github.com/realglobe-Inc/edo-auth/database/token"
 	"github.com/realglobe-Inc/edo-id-provider/claims"
 	keydb "github.com/realglobe-Inc/edo-id-provider/database/key"
@@ -28,11 +34,6 @@ import (
 	"github.com/realglobe-Inc/edo-lib/test"
 	"github.com/realglobe-Inc/go-lib/erro"
 	"github.com/realglobe-Inc/go-lib/rglog/level"
-	"net/http"
-	"net/http/httptest"
-	"regexp"
-	"testing"
-	"time"
 )
 
 func init() {

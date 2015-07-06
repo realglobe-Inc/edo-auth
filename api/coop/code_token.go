@@ -16,6 +16,7 @@ package coop
 
 import (
 	"encoding/json"
+
 	"github.com/realglobe-Inc/edo-lib/jwk"
 	"github.com/realglobe-Inc/edo-lib/jwt"
 	"github.com/realglobe-Inc/edo-lib/jwt/audience"
