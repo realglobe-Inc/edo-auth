@@ -90,7 +90,7 @@ func (this *environment) authServe(w http.ResponseWriter, r *http.Request) error
 	if scop := request.FormValueSet(queries.Get(tagScope)); !scop[tagOpenid] {
 		scop[tagOpenid] = true
 		queries.Set(tagScope, request.ValueSetForm(scop))
-		log.Debug(this.logPref, `: Added scope "`+tagOpenid+`"`)
+		log.Debug(this.logPref, `Added scope "`+tagOpenid+`"`)
 	}
 
 	// client_id
