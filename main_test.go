@@ -399,7 +399,7 @@ func waitServer(uri string, errCh chan error, exp time.Time) error {
 			return erro.Wrap(err)
 		}
 		r.Header.Set("Connection", "close")
-		if _, err := (&http.Client{}).Do(r); err == nil {
+		if _, err := http.DefaultClient.Do(r); err == nil {
 			break
 		}
 
