@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package auth
+package main
 
 import (
 	"encoding/json"
@@ -28,13 +28,16 @@ import (
 )
 
 const (
-	test_idpSigAlg = "ES256"
-	test_taSigAlg  = "ES384"
+	test_logPath = "/tmp/edo-access-proxy.log"
+	test_logSize = 100000000
+	test_logNum  = 10
+	test_logAddr = "127.0.0.1:24224"
+	test_logTag  = "edo-access-proxy"
+	test_socPort = 12345
+	test_socPath = "/tmp/edo-access-proxy.sock"
+	test_monAddr = "localhost"
 
-	test_reqPath   = "/a/b/c/d/e"
-	test_sessId    = "EBBR9STJ-hUL9PzniRasrc-qeFxJ9m"
-	test_stat      = "YJgUit_Wx5"
-	test_nonc      = "Wjj1_YUOlR"
+	test_idpSigAlg = "ES256"
 	test_cod       = "ZkTPOdBdh_bS2PqWnb1r8A3DqeKGCC"
 	test_tok       = "TM4CmjXyWQeqtasbRDqwSN80n26vuV"
 	test_acntId    = "EYClXo4mQKwSgPel"
@@ -49,84 +52,38 @@ var (
 		"y":   "soy5O11SFFFeYdhQVodXlYPIpeo0pCS69IxiVPPf0Tk",
 		"d":   "3BhkCluOkm8d8gvaPD5FDG2zeEw2JKf3D5LwN-mYmsw",
 	})
-	test_taKey, _ = jwk.FromMap(map[string]interface{}{
+	test_key, _ = jwk.FromMap(map[string]interface{}{
 		"kty": "EC",
 		"crv": "P-384",
 		"x":   "HlrMhzZww_AkmHV-2gDR5n7t75673UClnC7V2GewWva_sg-4GSUguFalVgwnK0tQ",
 		"y":   "fxS48Fy50SZFZ-RAQRWUZXZgRSWwiKVkqPTd6gypfpQNkXSwE69BXYIAQcfaLcf2",
 		"d":   "Gp-7eC0G7PjGzKoiAmTQ1iLsLU3AEy3h-bKFWSZOanXqSWI6wqJVPEUsatNYBJoG",
 	})
-	test_idp = idpdb.New(
-		"https://idp.example.org", nil,
-		"https://idp.example.org/auth", "", "", "", "", nil,
-	)
 )
 
-func newAuthRequest() (*http.Request, error) {
-	r, err := http.NewRequest("GET", "http://localhost/", nil)
+func newAuthRequest(uri, idpUri string) (*http.Request, error) {
+	r, err := http.NewRequest("GET", uri, nil)
 	if err != nil {
 		return nil, erro.Wrap(err)
 	}
-	r.Header.Set("X-Auth-Uri", test_idp.AuthUri())
+	r.Header.Set("X-Auth-Uri", idpUri)
+	r.Header.Set("Connection", "close")
 	return r, nil
 }
 
-func newCallbackRequest(page *Page) (*http.Request, error) {
+func newCallbackRequest(uri, stat string) (*http.Request, error) {
 	q := url.Values{}
 	q.Set("code", test_cod)
-	q.Set("state", test_stat)
-	r, err := http.NewRequest("GET", "http://localhost/callback?"+q.Encode(), nil)
+	q.Set("state", stat)
+	r, err := http.NewRequest("GET", uri+"?"+q.Encode(), nil)
 	if err != nil {
 		return nil, erro.Wrap(err)
 	}
-	r.AddCookie(&http.Cookie{
-		Name:  page.sessLabel,
-		Value: test_sessId,
-	})
+	r.Header.Set("Connection", "close")
 	return r, nil
 }
 
-func newCallbackRequestWithIdToken(page *Page, idp idpdb.Element, clms map[string]interface{}) (*http.Request, error) {
-	q := url.Values{}
-	q.Set("code", test_cod)
-	q.Set("state", test_stat)
-	idTok := jwt.New()
-	idTok.SetHeader("alg", test_idpSigAlg)
-	idTok.SetClaim("iss", idp.Id())
-	idTok.SetClaim("sub", test_acntId)
-	idTok.SetClaim("aud", page.selfId)
-	now := time.Now()
-	idTok.SetClaim("exp", now.Add(time.Minute).Unix())
-	idTok.SetClaim("iat", now.Unix())
-	idTok.SetClaim("nonce", test_nonc)
-	hGen := jwt.HashGenerator(test_idpSigAlg)
-	if !hGen.Available() {
-		return nil, erro.New("unsupported algorithm " + test_idpSigAlg)
-	}
-	idTok.SetClaim("c_hash", hashutil.Hashing(hGen.New(), []byte(test_cod)))
-	for k, v := range clms {
-		idTok.SetClaim(k, v)
-	}
-	if err := idTok.Sign(idp.Keys()); err != nil {
-		return nil, erro.Wrap(err)
-	}
-	data, err := idTok.Encode()
-	if err != nil {
-		return nil, erro.Wrap(err)
-	}
-	q.Set("id_token", string(data))
-	r, err := http.NewRequest("GET", "http://localhost/callback?"+q.Encode(), nil)
-	if err != nil {
-		return nil, erro.Wrap(err)
-	}
-	r.AddCookie(&http.Cookie{
-		Name:  page.sessLabel,
-		Value: test_sessId,
-	})
-	return r, nil
-}
-
-func newTestTokenResponse(page *Page, idp idpdb.Element, clms map[string]interface{}) (status int, hader http.Header, body []byte, err error) {
+func newTestTokenResponse(selfId, nonc string, idp idpdb.Element) (status int, hader http.Header, body []byte, err error) {
 	m := map[string]interface{}{
 		"access_token": test_tok,
 		"token_type":   "Bearer",
@@ -137,19 +94,16 @@ func newTestTokenResponse(page *Page, idp idpdb.Element, clms map[string]interfa
 	idTok.SetHeader("alg", test_idpSigAlg)
 	idTok.SetClaim("iss", idp.Id())
 	idTok.SetClaim("sub", test_acntId)
-	idTok.SetClaim("aud", page.selfId)
+	idTok.SetClaim("aud", selfId)
 	now := time.Now()
 	idTok.SetClaim("exp", now.Add(time.Minute).Unix())
 	idTok.SetClaim("iat", now.Unix())
-	idTok.SetClaim("nonce", test_nonc)
+	idTok.SetClaim("nonce", nonc)
 	hGen := jwt.HashGenerator(test_idpSigAlg)
 	if !hGen.Available() {
 		return 0, nil, nil, erro.New("unsupported algorithm " + test_idpSigAlg)
 	}
 	idTok.SetClaim("at_hash", hashutil.Hashing(hGen.New(), []byte(test_tok)))
-	for k, v := range clms {
-		idTok.SetClaim(k, v)
-	}
 	if err := idTok.Sign(idp.Keys()); err != nil {
 		return 0, nil, nil, erro.Wrap(err)
 	}
@@ -167,7 +121,7 @@ func newTestTokenResponse(page *Page, idp idpdb.Element, clms map[string]interfa
 	return http.StatusOK, nil, body, nil
 }
 
-func newTestAccountResponse(page *Page, idp idpdb.Element) (status int, hader http.Header, body []byte, err error) {
+func newTestAccountResponse(idp idpdb.Element) (status int, hader http.Header, body []byte, err error) {
 	m := map[string]interface{}{
 		"sub":   test_acntId,
 		"email": test_acntEmail,

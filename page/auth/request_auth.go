@@ -15,9 +15,10 @@
 package auth
 
 import (
-	"github.com/realglobe-Inc/go-lib/erro"
 	"net/http"
 	"net/url"
+
+	"github.com/realglobe-Inc/go-lib/erro"
 )
 
 type authRequest struct {

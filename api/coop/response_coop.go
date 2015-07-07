@@ -16,10 +16,11 @@ package coop
 
 import (
 	"encoding/json"
-	requtil "github.com/realglobe-Inc/edo-idp-selector/request"
-	"github.com/realglobe-Inc/go-lib/erro"
 	"net/http"
 	"time"
+
+	requtil "github.com/realglobe-Inc/edo-idp-selector/request"
+	"github.com/realglobe-Inc/go-lib/erro"
 )
 
 type coopResponse struct {

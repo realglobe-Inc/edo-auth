@@ -15,14 +15,15 @@
 package auth
 
 import (
+	"net/http"
+	"time"
+
 	"github.com/realglobe-Inc/edo-auth/database/asession"
 	"github.com/realglobe-Inc/edo-idp-selector/request"
 	logutil "github.com/realglobe-Inc/edo-lib/log"
 	"github.com/realglobe-Inc/edo-lib/server"
 	"github.com/realglobe-Inc/go-lib/erro"
 	"github.com/realglobe-Inc/go-lib/rglog/level"
-	"net/http"
-	"time"
 )
 
 // ユーザー認証開始。
@@ -89,7 +90,7 @@ func (this *environment) authServe(w http.ResponseWriter, r *http.Request) error
 	if scop := request.FormValueSet(queries.Get(tagScope)); !scop[tagOpenid] {
 		scop[tagOpenid] = true
 		queries.Set(tagScope, request.ValueSetForm(scop))
-		log.Debug(this.logPref, `: Added scope "`+tagOpenid+`"`)
+		log.Debug(this.logPref, `Added scope "`+tagOpenid+`"`)
 	}
 
 	// client_id

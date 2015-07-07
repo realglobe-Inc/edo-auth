@@ -18,14 +18,15 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
-	requtil "github.com/realglobe-Inc/edo-idp-selector/request"
-	"github.com/realglobe-Inc/edo-lib/strset/strsetutil"
 	"io"
 	"net/http"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
+
+	requtil "github.com/realglobe-Inc/edo-idp-selector/request"
+	"github.com/realglobe-Inc/edo-lib/strset/strsetutil"
 )
 
 func TestCoopResponse(t *testing.T) {

@@ -16,6 +16,12 @@ package main
 
 import (
 	"crypto/tls"
+	"html/template"
+	"net"
+	"net/http"
+	"os"
+	"time"
+
 	"github.com/realglobe-Inc/edo-auth/api/coop"
 	"github.com/realglobe-Inc/edo-auth/database/asession"
 	"github.com/realglobe-Inc/edo-auth/database/token"
@@ -29,11 +35,6 @@ import (
 	"github.com/realglobe-Inc/edo-lib/server"
 	"github.com/realglobe-Inc/go-lib/erro"
 	"github.com/realglobe-Inc/go-lib/rglog"
-	"html/template"
-	"net"
-	"net/http"
-	"os"
-	"time"
 )
 
 func main() {
@@ -110,7 +111,7 @@ func serve(param *parameters) (err error) {
 		return erro.New("invalid web data DB type " + param.webDbType)
 	}
 
-	// IdP 情報。
+	// ID プロバイダ情報。
 	var idpDb idpdb.Db
 	switch param.idpDbType {
 	case "mongo":
@@ -257,5 +258,5 @@ func serve(param *parameters) (err error) {
 			stopper.Wait()
 		}
 	}()
-	return server.Serve(param, mux)
+	return server.Serve(mux, param.socType, param.protType, param)
 }

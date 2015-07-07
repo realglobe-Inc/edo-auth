@@ -15,14 +15,15 @@
 package auth
 
 import (
+	"net/http"
+	"time"
+
 	idpdb "github.com/realglobe-Inc/edo-idp-selector/database/idp"
 	"github.com/realglobe-Inc/edo-idp-selector/request"
 	"github.com/realglobe-Inc/edo-lib/jwt"
 	"github.com/realglobe-Inc/edo-lib/server"
 	"github.com/realglobe-Inc/go-lib/erro"
 	"github.com/realglobe-Inc/go-lib/rglog/level"
-	"net/http"
-	"time"
 )
 
 func (this *Page) HandleCallback(w http.ResponseWriter, r *http.Request) {

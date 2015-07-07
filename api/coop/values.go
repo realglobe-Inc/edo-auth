@@ -14,8 +14,6 @@
 
 package coop
 
-import ()
-
 const (
 	// アンダースコア。
 	tagAlg                   = "alg"

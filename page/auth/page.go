@@ -17,6 +17,12 @@ package auth
 
 import (
 	"encoding/json"
+	"html/template"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
+
 	"github.com/realglobe-Inc/edo-auth/database/asession"
 	"github.com/realglobe-Inc/edo-auth/database/token"
 	keydb "github.com/realglobe-Inc/edo-id-provider/database/key"
@@ -27,11 +33,6 @@ import (
 	"github.com/realglobe-Inc/edo-lib/server"
 	"github.com/realglobe-Inc/go-lib/erro"
 	"github.com/realglobe-Inc/go-lib/rglog/level"
-	"html/template"
-	"net/http"
-	"net/url"
-	"strings"
-	"time"
 )
 
 type Page struct {

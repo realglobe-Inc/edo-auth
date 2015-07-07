@@ -16,8 +16,9 @@ package asession
 
 import (
 	"encoding/json"
-	"github.com/realglobe-Inc/go-lib/erro"
 	"time"
+
+	"github.com/realglobe-Inc/go-lib/erro"
 )
 
 // セッション。

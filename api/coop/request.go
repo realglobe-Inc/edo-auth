@@ -15,9 +15,10 @@
 package coop
 
 import (
+	"net/http"
+
 	requtil "github.com/realglobe-Inc/edo-idp-selector/request"
 	"github.com/realglobe-Inc/go-lib/erro"
-	"net/http"
 )
 
 type request struct {
