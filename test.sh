@@ -117,10 +117,9 @@ http {
         location / {
             more_clear_headers "X-Edo-Ta-Id";
             more_clear_headers "X-Forwarded-For"; # 手前に別のリバースプロキシがいるならこの設定は消す。
-            set \$edo_auth_dir ${install_dir};
-            set \$edo_auth_log_level error; # デバッグ。
-            set \$edo_auth_public_key_directory ${script_dir}/sample/public_keys;
-            set \$edo_auth_redis_port ${redis_port};
+            set \$edo_log_level error; # デバッグ。
+            set \$edo_key_directory ${script_dir}/sample/public_keys;
+            set \$edo_redis_address 127.0.0.1:${redis_port};
             access_by_lua_file lua/auth_ta.lua;
             proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
             proxy_set_header Host \$http_host;
@@ -172,9 +171,8 @@ EOF
  HASH="sha256"
  SIGN=$(printf ${TOKEN} | openssl dgst -${HASH} -binary | openssl pkeyutl -sign -inkey sample/private_keys/${TA}.key -pkeyopt digest:${HASH} | base64 | tr -d '\n')
 
- redis-cli -p ${redis_port} del "public_key:${TA}" > /dev/null
- redis-cli -p ${redis_port} del "session:authenticated:${SESSION}" > /dev/null
- redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
+ redis-cli -p ${redis_port} flushall > /dev/null
+ redis-cli -p ${redis_port} set "pre-session${SESSION}" '{"id":"'${SESSION}'","token":"'${TOKEN}'","address":"127.0.0.1"}' "EX" 10 > /dev/null
  TMP_FILE=/tmp/edo-auth-test
  curl -v \
       --cookie "X-Edo-Auth-Ta-Session"="${SESSION}" \
@@ -188,8 +186,8 @@ EOF
  elif ! grep -q '^< HTTP/[0-9.]\+ 200 OK' ${TMP_FILE}; then
      echo "Error (authenticating): invalid status "$(grep '^< HTTP/[0-9.]\+ ' ${TMP_FILE}) 1>&2
      exit 1
- elif [ -n ""$(redis-cli -p ${redis_port} get "session:unauthenticated:${SESSION}") ]; then
-     echo "Error (authenticating): unauthentcated session remains" $(redis-cli -p ${redis_port} get "session:unauthenticated:${SESSION}") 1>&2
+ elif [ -n ""$(redis-cli -p ${redis_port} get "pre-session${SESSION}") ]; then
+     echo "Error (authenticating): unauthentcated session remains" $(redis-cli -p ${redis_port} get "pre-session${SESSION}") 1>&2
      exit 1
  fi
  rm ${TMP_FILE}
@@ -198,7 +196,7 @@ EOF
 
 
  # 認証済み。
- redis-cli -p ${redis_port} setex "session:authenticated:${SESSION}" 10 '{"auth":true,"id":"'${SESSION}'","ta":"12345","client":"127.0.0.1"}' > /dev/null
+ redis-cli -p ${redis_port} setex "session${SESSION}" 10 '{"id":"'${SESSION}'","ta":"12345","address":"127.0.0.1"}' > /dev/null
 
  TMP_FILE=/tmp/edo-auth-test
  curl -v --cookie "X-Edo-Auth-Ta-Session"="${SESSION}" http://localhost:${nginx_port}/ > ${TMP_FILE} 2>&1
@@ -211,12 +209,12 @@ EOF
  fi
  rm ${TMP_FILE}
 
- redis-cli -p ${redis_port} del "session:authenticated:${SESSION}" > /dev/null
+ redis-cli -p ${redis_port} flushall > /dev/null
  echo "----- OK: authenticated -----"
 
 
  # セッション相手のアドレスが違っていたら 403 Forbidden を返すか。
- redis-cli -p ${redis_port} setex "session:authenticated:${SESSION}" 10 '{"auth":true,"id":"'${SESSION}'","ta":"12345","client":"192.0.2.1"}' > /dev/null
+ redis-cli -p ${redis_port} setex "session${SESSION}" 10 '{"id":"'${SESSION}'","ta":"12345","address":"192.0.2.1"}' > /dev/null
 
  TMP_FILE=/tmp/edo-auth-test
  curl -v --cookie "X-Edo-Auth-Ta-Session"="${SESSION}" http://localhost:${nginx_port}/ > ${TMP_FILE} 2>&1
@@ -229,13 +227,13 @@ EOF
  fi
  rm ${TMP_FILE}
 
- redis-cli -p ${redis_port} del "session:authenticated:${SESSION}" > /dev/null
+ redis-cli -p ${redis_port} flushall > /dev/null
  echo "----- OK: different source -----"
 
 
  # 認証情報が揃っていなかったら 403 Forbidden を返すか。
- redis-cli -p ${redis_port} del "session:authenticated:${SESSION}" > /dev/null
- redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
+ redis-cli -p ${redis_port} flushall > /dev/null
+ redis-cli -p ${redis_port} set "pre-session${SESSION}" '{"id":"'${SESSION}'","token":"'${TOKEN}'","address":"127.0.0.1"}' "EX" 10 > /dev/null
  TMP_FILE=/tmp/edo-auth-test
  curl -v \
       --cookie "X-Edo-Auth-Ta-Session"="${SESSION}" \
@@ -253,8 +251,8 @@ EOF
 
  echo "----- OK: no X-Edo-Auth-Ta-Id -----"
 
- redis-cli -p ${redis_port} del "session:authenticated:${SESSION}" > /dev/null
- redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
+ redis-cli -p ${redis_port} flushall > /dev/null
+ redis-cli -p ${redis_port} setex "pre-session${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","address":"127.0.0.1"}' > /dev/null
  TMP_FILE=/tmp/edo-auth-test
  curl -v \
       --cookie "X-Edo-Auth-Ta-Session"="${SESSION}" \
@@ -274,8 +272,8 @@ EOF
 
 
  # 公開鍵が無かったら 403 Forbidden を返すか。
- redis-cli -p ${redis_port} del "session:authenticated:${SESSION}" > /dev/null
- redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
+ redis-cli -p ${redis_port} flushall > /dev/null
+ redis-cli -p ${redis_port} setex "pre-session${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","address":"127.0.0.1"}' > /dev/null
  TMP_FILE=/tmp/edo-auth-test
  curl -v \
       --cookie "X-Edo-Auth-Ta-Session"="${SESSION}" \
@@ -296,8 +294,8 @@ EOF
 
 
  # 署名がおかしかったら 403 Forbidden を返すか。
- redis-cli -p ${redis_port} del "session:authenticated:${SESSION}" > /dev/null
- redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
+ redis-cli -p ${redis_port} flushall > /dev/null
+ redis-cli -p ${redis_port} setex "pre-session${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","address":"127.0.0.1"}' > /dev/null
  TMP_FILE=/tmp/edo-auth-test
  curl -v \
       --cookie "X-Edo-Auth-Ta-Session"="${SESSION}" \
@@ -319,9 +317,8 @@ EOF
 
  # 公開鍵が証明書でも大丈夫か。
  TA="test"
- redis-cli -p ${redis_port} del "public_key:${TA}" > /dev/null
- redis-cli -p ${redis_port} del "session:authenticated:${SESSION}" > /dev/null
- redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
+ redis-cli -p ${redis_port} flushall > /dev/null
+ redis-cli -p ${redis_port} setex "pre-session${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","address":"127.0.0.1"}' > /dev/null
  SIGN=$(printf ${TOKEN} | openssl dgst -${HASH} -binary | openssl pkeyutl -sign -inkey sample/private_keys/${TA}.key -pkeyopt digest:${HASH} | base64 | tr -d '\n')
  TMP_FILE=/tmp/edo-auth-test
  curl -v \
@@ -336,8 +333,8 @@ EOF
  elif ! grep -q '^< HTTP/[0-9.]\+ 200 OK' ${TMP_FILE}; then
      echo "Error (public key in certification): invalid status "$(grep '^< HTTP/[0-9.]\+ ' ${TMP_FILE}) 1>&2
      exit 1
- elif [ -n ""$(redis-cli -p ${redis_port} get "session:unauthenticated:${SESSION}") ]; then
-     echo "Error (public key in certification): unauthentcated session remains" $(redis-cli -p ${redis_port} get "session:unauthenticated:${SESSION}") 1>&2
+ elif [ -n ""$(redis-cli -p ${redis_port} get "pre-session${SESSION}") ]; then
+     echo "Error (public key in certification): unauthentcated session remains" $(redis-cli -p ${redis_port} get "pre-session${SESSION}") 1>&2
      exit 1
  fi
  rm ${TMP_FILE}
@@ -348,9 +345,8 @@ EOF
  # 公開鍵のファイル名が URL クエリ用にエスケープされていても大丈夫か。
  TA="https://example.org"
  TA_ESCAPED="https%3A%2F%2Fexample.org"
- redis-cli -p ${redis_port} del "public_key:${TA}" > /dev/null
- redis-cli -p ${redis_port} del "session:authenticated:${SESSION}" > /dev/null
- redis-cli -p ${redis_port} setex "session:unauthenticated:${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","client":"127.0.0.1"}' > /dev/null
+ redis-cli -p ${redis_port} flushall > /dev/null
+ redis-cli -p ${redis_port} setex "pre-session${SESSION}" 10 '{"id":"'${SESSION}'","token":"'${TOKEN}'","address":"127.0.0.1"}' > /dev/null
  SIGN=$(printf ${TOKEN} | openssl dgst -${HASH} -binary | openssl pkeyutl -sign -inkey ${script_dir}/sample/private_keys/${TA_ESCAPED}.key -pkeyopt digest:${HASH} | base64 | tr -d '\n')
  TMP_FILE=/tmp/edo-auth-test
  curl -v \
@@ -365,8 +361,8 @@ EOF
  elif ! grep -q '^< HTTP/[0-9.]\+ 200 OK' ${TMP_FILE}; then
      echo "Error (url query escaped public key file): invalid status "$(grep '^< HTTP/[0-9.]\+ ' ${TMP_FILE}) 1>&2
      exit 1
- elif [ -n ""$(redis-cli -p ${redis_port} get "session:unauthenticated:${SESSION}") ]; then
-     echo "Error (url query escaped public key file): unauthentcated session remains" $(redis-cli -p ${redis_port} get "session:unauthenticated:${SESSION}") 1>&2
+ elif [ -n ""$(redis-cli -p ${redis_port} get "pre-session${SESSION}") ]; then
+     echo "Error (url query escaped public key file): unauthentcated session remains" $(redis-cli -p ${redis_port} get "pre-session${SESSION}") 1>&2
      exit 1
  fi
  rm ${TMP_FILE}

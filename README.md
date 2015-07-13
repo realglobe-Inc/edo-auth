@@ -28,13 +28,13 @@ limitations under the License.
 install.sh で nginx ごとセットアップできる。
 
 ```shell
-./install.sh
+./script/install.sh
 ```
 
 インストール先を変える場合は install_dir で指定する。
 
 ```shell
-install_dir=/home/edo-auth ./install.sh
+install_dir=/home/edo-auth ./script/install.sh
 ```
 
 
@@ -42,8 +42,7 @@ install_dir=/home/edo-auth ./install.sh
 
 |シェル変数|初期値|値|
 |:--|:--|:--|
-|install_dir|install.sh のあるディレクトリの rootディレクトリ|インストール先のパス|
-|nginx_port|7000|nginx のポート番号|
+|install_dir|プロジェクト直下の root ディレクトリ|インストール先のパス|
 
 
 ### 1.2. nginx の設定
@@ -87,10 +86,9 @@ sample/nginx.conf を参考に。
 
 |項目名|初期値|値|
 |:--|:--|:--|
-|$edo\_auth\_log\_level|debug|edo-auth のログを nginx のどのログレベルで出力するか|
-|$edo\_auth\_redis\_host|127.0.0.1|使用する redis のアドレス|
-|$edo\_auth\_redis\_port|6379|使用する redis のポート番号|
-|$edo\_auth\_public\_key\_directory||公開鍵置き場のパス|
+|$edo\_key\_directory||公開鍵置き場のパス|
+|$edo\_log\_level|debug|edo-auth のログを nginx のどのログレベルで出力するか|
+|$edo\_redis\_address|127.0.0.1:6379|使用する redis のアドレス|
 
 
 ## 3. 動作仕様
