@@ -34,7 +34,7 @@ install.sh で nginx ごとセットアップできる。
 インストール先を変える場合は install_dir で指定する。
 
 ```shell
-install_dir=/opt/edo-auth ./install.sh
+install_dir=/home/edo-auth ./install.sh
 ```
 
 
@@ -42,21 +42,14 @@ install_dir=/opt/edo-auth ./install.sh
 
 |シェル変数|初期値|値|
 |:--|:--|:--|
-|install_dir|install.sh のあるディレクトリ|インストール先のパス|
+|install_dir|install.sh のあるディレクトリの rootディレクトリ|インストール先のパス|
 |nginx_port|7000|nginx のポート番号|
-|nginx|true|インストール終了時に nginx を起動するかどうか|
-|proxy_pass|http://example.org|edo-auth を通した後に転送する先|
 
 
-### 1.2. 既存の nginx で使う
+### 1.2. nginx の設定
 
-必要なモジュールと共に nginx がコンパイルされているなら、nginx の設定ファイルの適切な箇所に以下のような設定を追加する。
+sample/nginx.conf を参考に。
 
-```nginx
-set $edo_auth_dir /opt/edo-auth;
-set $edo_auth_public_key_directory $edo_auth_dir/public_keys;
-access_by_lua_file $edo_auth_dir/lua/auth_ta.lua;
-```
 
 ## 2. 実行
 

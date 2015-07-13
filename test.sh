@@ -54,9 +54,9 @@ EOF
  # プロキシ先を立てる。
  while true; do
      if ! nc -z localhost $nginx_port; then
-         rm -rf /tmp/edo-auth-dest
-         cp -r ${install_dir}/nginx /tmp/edo-auth-dest
-         cat <<EOF > /tmp/edo-auth-dest/conf/nginx.conf
+         rm -rf /tmp/edo-auth-to
+         cp -r ${install_dir}/opt/nginx /tmp/edo-auth-to
+         cat <<EOF > /tmp/edo-auth-to/conf/nginx.conf
 worker_processes  1;
 events {
     worker_connections  1024;
@@ -83,21 +83,21 @@ http {
     }
 }
 EOF
-         /tmp/edo-auth-dest/sbin/nginx -p /tmp/edo-auth-dest
+         /tmp/edo-auth-to/sbin/nginx -p /tmp/edo-auth-to
          break
      else
          nginx_port=$((${nginx_port} + 1))
      fi
  done
  dest_nginx_port=${nginx_port}
- trap "redis-cli -p ${redis_port} shutdown; del_nginx /tmp/edo-auth-dest" EXIT
+ trap "redis-cli -p ${redis_port} shutdown; del_nginx /tmp/edo-auth-to" EXIT
  echo "start destination nginx at port ${dest_nginx_port}"
 
  while true; do
      if ! nc -z localhost $nginx_port; then
-         rm -rf /tmp/edo-auth
-         cp -r ${install_dir}/nginx /tmp/edo-auth
-         cat <<EOF > /tmp/edo-auth/conf/nginx.conf
+         rm -rf /tmp/edo-auth-from
+         cp -r ${install_dir}/opt/nginx /tmp/edo-auth-from
+         cat <<EOF > /tmp/edo-auth-from/conf/nginx.conf
 worker_processes  2;
 events {
     worker_connections  1024;
@@ -110,6 +110,7 @@ http {
     default_type  text/plain;
     sendfile        on;
     keepalive_timeout  65;
+    lua_package_path '\${prefix}lua/?.lua;;';
     server {
         listen       ${nginx_port};
         server_name  localhost;
@@ -120,7 +121,7 @@ http {
             set \$edo_auth_log_level error; # デバッグ。
             set \$edo_auth_public_key_directory ${script_dir}/sample/public_keys;
             set \$edo_auth_redis_port ${redis_port};
-            access_by_lua_file \$edo_auth_dir/lua/auth_ta.lua;
+            access_by_lua_file lua/auth_ta.lua;
             proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
             proxy_set_header Host \$http_host;
             proxy_pass http://localhost:${dest_nginx_port}/;
@@ -132,13 +133,13 @@ http {
     }
 }
 EOF
-         /tmp/edo-auth/sbin/nginx -p /tmp/edo-auth
+         /tmp/edo-auth-from/sbin/nginx -p /tmp/edo-auth-from
          break
      else
          nginx_port=$((${nginx_port} + 1))
      fi
  done
- trap "redis-cli -p ${redis_port} shutdown; del_nginx /tmp/edo-auth-dest /tmp/edo-auth" EXIT
+ trap "redis-cli -p ${redis_port} shutdown; del_nginx /tmp/edo-auth-to /tmp/edo-auth-from" EXIT
  echo "start edo-auth at port ${nginx_port}"
 
  sleep 0.1
