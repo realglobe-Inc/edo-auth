@@ -19,7 +19,7 @@ limitations under the License.
 
 現状は、TA 内にて、アクセスしてきた他の TA の認証を行う nginx のモジュール。
 
-以下、例における /opt/edo-auth はインストールパスとする。
+以下、例における /home/edo-auth はインストールパスとする。
 異なる場合は適宜置き換えること。
 
 
@@ -76,11 +76,8 @@ sample/nginx.conf を参考に。
 
 ### 2.3. 起動
 
-install.sh でインストールした場合はデーモンとして起動している。
-起動させていない場合、一旦終了させた場合は、
-
 ```shell
-/opt/edo-auth/nginx/sbin/nginx
+/home/edo-auth/opt/nginx/sbin/nginx
 ```
 
 
