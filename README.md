@@ -63,7 +63,6 @@ go をインストールしたら、
 
 ```shell
 go get github.com/realglobe-Inc/edo-auth
-go install github.com/realglobe-Inc/edo-auth
 ```
 
 適宜、依存ライブラリを `go get` すること。
