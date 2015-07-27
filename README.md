@@ -63,7 +63,6 @@ go をインストールしたら、
 
 ```shell
 go get github.com/realglobe-Inc/edo-auth
-go install github.com/realglobe-Inc/edo-auth
 ```
 
 適宜、依存ライブラリを `go get` すること。
@@ -107,6 +106,9 @@ install.sh で /home/edo-auth にインストールしたとすれば、
 
 
 ### 2.3. バックエンド
+
+以下ではバイナリファイルが `${GOPATH}/bin/edo-auth` にあるとする。
+パスが異なる場合は置き換えること。
 
 
 #### 2.3.1. 起動
