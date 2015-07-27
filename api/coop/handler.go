@@ -54,7 +54,7 @@ type handler struct {
 	idpDb idpdb.Db
 	tokDb token.Db
 	idGen rand.Generator
-	tr    http.RoundTripper
+	conn  *http.Client
 
 	cookPath string
 	cookSec  bool
@@ -76,7 +76,7 @@ func New(
 	idpDb idpdb.Db,
 	tokDb token.Db,
 	idGen rand.Generator,
-	tr http.RoundTripper,
+	conn *http.Client,
 	cookPath string,
 	cookSec bool,
 	debug bool,
@@ -96,15 +96,11 @@ func New(
 		idpDb,
 		tokDb,
 		idGen,
-		tr,
+		conn,
 		cookPath,
 		cookSec,
 		debug,
 	}
-}
-
-func (this *handler) httpClient() *http.Client {
-	return &http.Client{Transport: this.tr}
 }
 
 func (this *handler) newCookie(id string, exp time.Time) *http.Cookie {
@@ -366,7 +362,7 @@ func (this *environment) getInfo(isMain bool, idp idpdb.Element, codTok *codeTok
 	log.Debug(this.logPref, "Made main cooperation-to request")
 
 	server.LogRequest(level.DEBUG, r, this.debug, this.logPref)
-	resp, err := this.httpClient().Do(r)
+	resp, err := this.conn.Do(r)
 	if err != nil {
 		return "", nil, nil, erro.Wrap(err)
 	}
