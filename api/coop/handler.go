@@ -139,7 +139,7 @@ func (this *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer log.Info(logPref, "Handled cooperation request")
 
 	if err := (&environment{this, logPref}).serve(w, r); err != nil {
-		w.Header().Set(tagX_edo_cooperation_error, erro.Unwrap(err).Error())
+		w.Header().Set(tagX_edo_cooperation_error, idperr.From(err).ErrorDescription())
 		idperr.RespondJson(w, r, erro.Wrap(err), logPref)
 		return
 	}
