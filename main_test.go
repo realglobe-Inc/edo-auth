@@ -147,6 +147,7 @@ func TestServerWithDb(t *testing.T) {
 	} else if red == nil {
 		t.SkipNow()
 	}
+	defer red.Close()
 
 	// ID プロバイダの準備。
 	idpServ, err := newTestIdProvider([]jwk.Key{test_idpKey})
