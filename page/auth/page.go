@@ -199,7 +199,7 @@ func (this *environment) getAccessToken(req *callbackRequest, idp idpdb.Element)
 	tokReq.Header.Set(tagContent_type, contTypeForm)
 
 	server.LogRequest(level.DEBUG, tokReq, this.debug, this.logPref)
-	resp, err := (&http.Client{}).Do(tokReq)
+	resp, err := http.DefaultClient.Do(tokReq)
 	if err != nil {
 		return nil, nil, erro.Wrap(err)
 	}
@@ -245,7 +245,7 @@ func (this *environment) getAccountInfo(req *callbackRequest, tok *token.Element
 	acntReq.Header.Set(tagAuthorization, tagBearer+" "+tok.Id())
 
 	server.LogRequest(level.DEBUG, acntReq, this.debug, this.logPref)
-	resp, err := (&http.Client{}).Do(acntReq)
+	resp, err := http.DefaultClient.Do(acntReq)
 	if err != nil {
 		return nil, erro.Wrap(err)
 	}
