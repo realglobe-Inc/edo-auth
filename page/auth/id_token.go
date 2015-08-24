@@ -16,9 +16,9 @@ package auth
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 
-	"github.com/realglobe-Inc/edo-lib/base64url"
 	"github.com/realglobe-Inc/edo-lib/hash"
 	"github.com/realglobe-Inc/edo-lib/jwk"
 	"github.com/realglobe-Inc/edo-lib/jwt"
@@ -63,13 +63,13 @@ func parseIdToken(raw []byte) (*idToken, error) {
 	}
 	var cHash, atHash []byte
 	if buff.CHash != "" {
-		cHash, err = base64url.DecodeString(buff.CHash)
+		cHash, err = base64.RawURLEncoding.DecodeString(buff.CHash)
 		if err != nil {
 			return nil, erro.Wrap(err)
 		}
 	}
 	if buff.AtHash != "" {
-		atHash, err = base64url.DecodeString(buff.AtHash)
+		atHash, err = base64.RawURLEncoding.DecodeString(buff.AtHash)
 		if err != nil {
 			return nil, erro.Wrap(err)
 		}
