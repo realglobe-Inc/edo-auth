@@ -23,7 +23,7 @@ lua_cjson_ver=${lua_cjson_ver:=2.1.0}
 lua_resty_redis_ver=${lua_resty_redis_ver:=688f932}
 luajit_ver=${luajit_ver:=2.0.3}
 lua_openssl_ver=${lua_openssl_ver:=164542389b}
-openssl_ver=${openssl_ver:=1.0.2c}
+openssl_ver=${openssl_ver:=OpenSSL_1_0_2h}
 
 project_dir=$(cd $(dirname $0)/.. && pwd)
 
@@ -70,14 +70,13 @@ mkdir -p ${src_dir}
  # lua-openssl
  if ! [ -f ${install_dir}/lib/lua/5.1/openssl.so ];then
      # まず openssl をコンパイルして libssl.a をつくる。
-     if ! [ -d openssl-${openssl_ver} ]; then
-         if ! [ -f openssl-${openssl_ver}.tar.gz ]; then
-             wget ftp://ftp.openssl.org/source/openssl-${openssl_ver}.tar.gz
-         fi
-         tar zxf openssl-${openssl_ver}.tar.gz
+     if ! [ -d openssl ]; then
+         git clone https://github.com/openssl/openssl
      fi
      if ! [ -f ${install_dir}/lib/libssl.a ]; then
-         (cd openssl-${openssl_ver}
+         (cd openssl/
+          git fetch
+          git checkout ${openssl_ver}
           ./config --prefix=${install_dir} -fPIC
           make clean
           make
