@@ -23,7 +23,7 @@ lua_nginx_ver=${lua_nginx_ver:=v0.9.16}
 luajit_ver=${luajit_ver:=2.0.3}
 nginx_ver=${nginx_ver:=1.7.10}
 ngx_devel_kit_ver=${ngx_devel_kit_ver:=v0.2.19}
-openssl_ver=${openssl_ver:=1.0.2c}
+openssl_ver=${openssl_ver:=OpenSSL_1_0_2h}
 pcre_ver=${pcre_ver:=8.37}
 zlib_ver=${zlib_ver:=1.2.8}
 
@@ -61,12 +61,13 @@ mkdir -p ${src_dir}
  fi
 
  # openssl
- if ! [ -d openssl-${openssl_ver} ]; then
-     if ! [ -f openssl-${openssl_ver}.tar.gz ]; then
-         wget ftp://ftp.openssl.org/source/openssl-${openssl_ver}.tar.gz
-     fi
-     tar zxf openssl-${openssl_ver}.tar.gz
+ if ! [ -d openssl ]; then
+     git clone https://github.com/openssl/openssl
  fi
+ (cd openssl/
+  git fetch
+  git checkout ${openssl_ver}
+ )
 
  # headers-more
  if ! [ -d headers-more-nginx-module ]; then
@@ -132,7 +133,7 @@ mkdir -p ${src_dir}
           --with-http_ssl_module \
           --with-http_sub_module \
           --with-ld-opt="-Wl,-rpath=${install_dir}/lib" \
-          --with-openssl=${src_dir}/openssl-${openssl_ver} \
+          --with-openssl=${src_dir}/openssl \
           --with-pcre=${src_dir}/pcre-${pcre_ver} \
           --with-zlib=${src_dir}/zlib-${zlib_ver} \
           --add-module=${src_dir}/headers-more-nginx-module \
